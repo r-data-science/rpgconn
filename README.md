@@ -3,6 +3,7 @@
 <!-- badges: start -->
 [![Codecov](https://codecov.io/gh/r-data-science/rpgconn/branch/main/graph/badge.svg)](https://app.codecov.io/gh/r-data-science/rpgconn?branch=main)
 [![R-CMD-check](https://github.com/r-data-science/rpgconn/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/r-data-science/rpgconn/actions/workflows/R-CMD-check.yaml)
+[![CRAN status](https://www.r-pkg.org/badges/version/rpgconn)](https://CRAN.R-project.org/package=rpgconn)
 <!-- badges: end -->
 
 The goal of rpgconn is to provide a simple interface for connecting to a PostgreSQL database.
