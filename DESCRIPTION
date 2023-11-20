@@ -1,0 +1,26 @@
+Package: rpgconn
+Type: Package
+Title: Simple Postgres Connection
+Version: 0.1.0
+Authors@R: 
+    person(given = "Bobby",
+           family = "Fatemi",
+           role = c("aut", "cre"),
+           email = "bfatemi07@gmail.com")
+Maintainer: Bobby Fatemi <bfatemi07@gmail.com>
+Description: Wrapper around RPostgres to make connecting and disconnecting to a Postgres database easier.
+Encoding: UTF-8
+LazyData: true
+License: MIT + file LICENSE
+RoxygenNote: 7.2.3
+Imports: 
+    DBI,
+    fs,
+    RPostgres,
+    stringr,
+    usethis,
+    yaml
+Suggests: 
+    rstudioapi,
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3

@@ -1,0 +1,5 @@
+options:
+  connect_timeout: 10
+  timezone: UTC
+  application_name: rpgconn
+  client_encoding: UTF8
