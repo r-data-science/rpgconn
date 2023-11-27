@@ -23,10 +23,9 @@ NULL
 #' @describeIn pgdbconn Connect to a database or return the connection arguments
 #' @export
 dbc <- function(cfg = NULL, db = NULL, args_only = FALSE) {
-  message("\n[---- Checking RPG_CONN_STRING ----]")
-
   # if cfg is null, use envvar
   if (is.null(cfg)) {
+    message("\n[---- Checking RPG_CONN_STRING ----]")
     c_envvar <- Sys.getenv("RPG_CONN_STRING", "") # Envvar must be set
     if (c_envvar == "")
       stop("RPG_CONN_STRING not set", call. = FALSE)

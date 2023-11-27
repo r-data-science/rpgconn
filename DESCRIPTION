@@ -1,14 +1,14 @@
 Package: rpgconn
 Type: Package
-Title: Simple Postgres Connection
-Version: 0.1.0
+Title: Simple Database Connection Wrapper
+Version: 0.1.1
 Authors@R: 
     person(given = "Bobby",
            family = "Fatemi",
            role = c("aut", "cre"),
            email = "bfatemi07@gmail.com")
 Maintainer: Bobby Fatemi <bfatemi07@gmail.com>
-Description: Wrapper around RPostgres to make connecting and disconnecting to a Postgres database easier.
+Description: Wrapper around 'RPostgres' to make connecting and disconnecting to a Postgres database easier.
 Encoding: UTF-8
 LazyData: true
 License: MIT + file LICENSE
