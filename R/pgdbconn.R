@@ -9,7 +9,7 @@
 #' @importFrom DBI dbConnect dbDisconnect
 #' @importFrom stringr str_extract str_split_1
 #' @importFrom usethis edit_file
-#' @importFrom fs path_package
+#' @importFrom fs path_package dir_create path file_exists file_copy
 #' @importFrom yaml yaml.load_file
 #'
 #' @return \code{dbc} returns a database connection object or a list of connection arguments while \code{dbd} returns nothing
@@ -94,6 +94,22 @@ dbd <- function(cn) {
   DBI::dbDisconnect(cn)
 }
 
+
+#' @describeIn pgdbconn edit the internally configured connection parameters
+#' @export
+init_yamls <- function() {
+  fs::dir_create(fs::path(Sys.getenv("HOME"), ".rpgconn"))
+  if (!fs::file_exists(xpath_config()))
+    fs::file_copy(xpath_config_templ(), xpath_config())
+  if (!fs::file_exists(xpath_options()))
+    fs::file_copy(xpath_options_templ(), xpath_options())
+  message(
+    "rpgconn: configs created",
+    "\n...Update connection configs: edit_config()",
+    "\n...Update connection options: edit_options()"
+  )
+}
+
 #' @describeIn pgdbconn edit the internally configured connection parameters
 #' @export
 edit_config <- function() {
@@ -116,13 +132,22 @@ load_c_opts <- function() {
   yaml::yaml.load_file(xpath_options())$options
 }
 
-#' @describeIn pgdbconn internal function to get path of config file
 xpath_config <- function() {
+  fs::path(Sys.getenv("HOME"), ".rpgconn/config.yml")
+}
+
+xpath_options <- function() {
+  fs::path(Sys.getenv("HOME"), ".rpgconn/options.yml")
+}
+
+
+#' @describeIn pgdbconn internal function to get path of config file
+xpath_config_templ <- function() {
   fs::path_package("rpgconn", "extdata", "config.yml")
 }
 
 #' @describeIn pgdbconn internal function to get path of options file
-xpath_options <- function() {
+xpath_options_templ <- function() {
   fs::path_package("rpgconn", "extdata", "options.yml")
 }
 

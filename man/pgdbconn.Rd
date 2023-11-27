@@ -4,17 +4,20 @@
 \alias{pgdbconn}
 \alias{dbc}
 \alias{dbd}
+\alias{init_yamls}
 \alias{edit_config}
 \alias{edit_options}
 \alias{load_c_args}
 \alias{load_c_opts}
-\alias{xpath_config}
-\alias{xpath_options}
+\alias{xpath_config_templ}
+\alias{xpath_options_templ}
 \title{Database Connect/Disconnect}
 \usage{
 dbc(cfg = NULL, db = NULL, args_only = FALSE)
 
 dbd(cn)
+
+init_yamls()
 
 edit_config()
 
@@ -24,9 +27,9 @@ load_c_args()
 
 load_c_opts()
 
-xpath_config()
+xpath_config_templ()
 
-xpath_options()
+xpath_options_templ()
 }
 \arguments{
 \item{cfg}{a connection config name used when loading connection args from internally stored yaml}
@@ -49,6 +52,8 @@ Database Connect/Disconnect
 
 \item \code{dbd()}: Disconnect from a database
 
+\item \code{init_yamls()}: edit the internally configured connection parameters
+
 \item \code{edit_config()}: edit the internally configured connection parameters
 
 \item \code{edit_options()}: edit the internally configured connection options
@@ -57,9 +62,9 @@ Database Connect/Disconnect
 
 \item \code{load_c_opts()}: internal function to read conn options from yaml
 
-\item \code{xpath_config()}: internal function to get path of config file
+\item \code{xpath_config_templ()}: internal function to get path of config file
 
-\item \code{xpath_options()}: internal function to get path of options file
+\item \code{xpath_options_templ()}: internal function to get path of options file
 
 }}
 \examples{
