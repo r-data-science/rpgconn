@@ -3,6 +3,7 @@
 <!-- badges: start -->
 [![Codecov](https://codecov.io/gh/r-data-science/rpgconn/branch/main/graph/badge.svg)](https://app.codecov.io/gh/r-data-science/rpgconn?branch=main)
 [![R-CMD-check](https://github.com/r-data-science/rpgconn/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/r-data-science/rpgconn/actions/workflows/R-CMD-check.yaml)
+[![test-coverage](https://github.com/r-data-science/rpgconn/actions/workflows/test-coverage.yaml/badge.svg)](https://github.com/r-data-science/rpgconn/actions/workflows/test-coverage.yaml)
 [![CRAN status](https://www.r-pkg.org/badges/version/rpgconn)](https://CRAN.R-project.org/package=rpgconn)
 <!-- badges: end -->
 
