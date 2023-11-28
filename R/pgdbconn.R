@@ -124,29 +124,37 @@ edit_options <- function() {
 
 #' @describeIn pgdbconn internal function to read conn args from yaml
 load_c_args <- function() {
-  yaml::yaml.load_file(xpath_config())$config
+  path <- xpath_config()
+  if (!fs::file_exists(path))
+    init_yamls()
+  yaml::yaml.load_file(path)$config
 }
 
 #' @describeIn pgdbconn internal function to read conn options from yaml
 load_c_opts <- function() {
-  yaml::yaml.load_file(xpath_options())$options
+  path <- xpath_options()
+  if (!fs::file_exists(path))
+    init_yamls()
+  yaml::yaml.load_file(path)$options
 }
 
+#' @describeIn pgdbconn internal function to get path of config file
 xpath_config <- function() {
   fs::path(Sys.getenv("HOME"), ".rpgconn/config.yml")
 }
 
+#' @describeIn pgdbconn internal function to get path of options file
 xpath_options <- function() {
   fs::path(Sys.getenv("HOME"), ".rpgconn/options.yml")
 }
 
 
-#' @describeIn pgdbconn internal function to get path of config file
+#' @describeIn pgdbconn internal function to get path of config file template
 xpath_config_templ <- function() {
   fs::path_package("rpgconn", "extdata", "config.yml")
 }
 
-#' @describeIn pgdbconn internal function to get path of options file
+#' @describeIn pgdbconn internal function to get path of options file template
 xpath_options_templ <- function() {
   fs::path_package("rpgconn", "extdata", "options.yml")
 }

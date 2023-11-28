@@ -1,7 +1,7 @@
 Package: rpgconn
 Type: Package
 Title: Simple Database Connection Wrapper
-Version: 0.1.2
+Version: 0.1.4
 Authors@R: 
     person(given = "Bobby",
            family = "Fatemi",

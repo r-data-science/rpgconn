@@ -9,6 +9,8 @@
 \alias{edit_options}
 \alias{load_c_args}
 \alias{load_c_opts}
+\alias{xpath_config}
+\alias{xpath_options}
 \alias{xpath_config_templ}
 \alias{xpath_options_templ}
 \title{Database Connect/Disconnect}
@@ -26,6 +28,10 @@ edit_options()
 load_c_args()
 
 load_c_opts()
+
+xpath_config()
+
+xpath_options()
 
 xpath_config_templ()
 
@@ -62,9 +68,13 @@ Database Connect/Disconnect
 
 \item \code{load_c_opts()}: internal function to read conn options from yaml
 
-\item \code{xpath_config_templ()}: internal function to get path of config file
+\item \code{xpath_config()}: internal function to get path of config file
 
-\item \code{xpath_options_templ()}: internal function to get path of options file
+\item \code{xpath_options()}: internal function to get path of options file
+
+\item \code{xpath_config_templ()}: internal function to get path of config file template
+
+\item \code{xpath_options_templ()}: internal function to get path of options file template
 
 }}
 \examples{
