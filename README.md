@@ -1,4 +1,5 @@
-# rpgconn
+# rpgconn <img src="man/figures/logo.png" align="right" height="120" alt="" />
+
 
 <!-- badges: start -->
 [![Codecov](https://codecov.io/gh/r-data-science/rpgconn/branch/main/graph/badge.svg)](https://app.codecov.io/gh/r-data-science/rpgconn?branch=main)
