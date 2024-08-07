@@ -1,18 +1,18 @@
 Package: rpgconn
 Type: Package
-Title: Simple Database Connection Wrapper
-Version: 0.1.4
+Title: Simple Database Connection
+Version: 0.2.1
 Authors@R: 
     person(given = "Bobby",
            family = "Fatemi",
            role = c("aut", "cre"),
            email = "bfatemi07@gmail.com")
 Maintainer: Bobby Fatemi <bfatemi07@gmail.com>
-Description: Wrapper around 'RPostgres' to make connecting and disconnecting to a Postgres database easier.
+Description: Simplified odbc connection management.
 Encoding: UTF-8
 LazyData: true
 License: MIT + file LICENSE
-RoxygenNote: 7.2.3
+RoxygenNote: 7.3.1
 Imports: 
     DBI,
     fs,

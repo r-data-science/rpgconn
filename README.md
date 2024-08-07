@@ -10,15 +10,6 @@
 
 The goal of rpgconn is to provide a simple interface for connecting to a PostgreSQL database.
 
-## Installation
-
-You can install the development version of rpgconn like so:
-
-``` r
-# dev version
-devtools::install_github("r-data-science/rpgconn")
-```
-
 ## Setting RPG_CONN_STRING
 
 The environment variable `RPG_CONN_STRING` must be set and have the format shown below.
