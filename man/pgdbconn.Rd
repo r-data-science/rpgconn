@@ -5,6 +5,7 @@
 \alias{dbc}
 \alias{dbd}
 \alias{init_yamls}
+\alias{dir_rpg}
 \alias{edit_config}
 \alias{edit_options}
 \alias{load_c_args}
@@ -20,6 +21,8 @@ dbc(cfg = NULL, db = NULL, args_only = FALSE)
 dbd(cn)
 
 init_yamls()
+
+dir_rpg()
 
 edit_config()
 
@@ -59,6 +62,8 @@ Database Connect/Disconnect
 \item \code{dbd()}: Disconnect from a database
 
 \item \code{init_yamls()}: edit the internally configured connection parameters
+
+\item \code{dir_rpg()}: get the path to the rpg settings directory
 
 \item \code{edit_config()}: edit the internally configured connection parameters
 

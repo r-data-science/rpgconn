@@ -2,6 +2,7 @@
 
 export(dbc)
 export(dbd)
+export(dir_rpg)
 export(edit_config)
 export(edit_options)
 export(init_yamls)

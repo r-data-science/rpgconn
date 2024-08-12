@@ -98,7 +98,7 @@ dbd <- function(cn) {
 #' @describeIn pgdbconn edit the internally configured connection parameters
 #' @export
 init_yamls <- function() {
-  dir_rpg <- fs::dir_create(fs::path(Sys.getenv("HOME", "."), ".rpgconn"))
+  dir_rpg <- fs::dir_create(dir_rpg())
   if (!fs::file_exists(xpath_config()))
     fs::file_copy(xpath_config_templ(), xpath_config())
   if (!fs::file_exists(xpath_options()))
@@ -109,6 +109,13 @@ init_yamls <- function() {
     "\n...Update connection options: edit_options()"
   )
   invisible(dir_rpg)
+}
+
+
+#' @describeIn pgdbconn get the path to the rpg settings directory
+#' @export
+dir_rpg <- function() {
+  fs::path(Sys.getenv("HOME", "."), ".rpgconn")
 }
 
 #' @describeIn pgdbconn edit the internally configured connection parameters

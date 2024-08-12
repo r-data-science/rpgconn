@@ -10,7 +10,7 @@ use_config <- function(path, overwrite = FALSE) {
   tmp_path <- tryCatch({
 
     # write input yaml at path to temp yaml file
-    tmp <- tempfile(fileext = ".yaml")
+    tmp <- tempfile(fileext = ".yml")
     new_yaml <- yaml::read_yaml(path)
     yaml::write_yaml(new_yaml, file = tmp)
     tmp
@@ -24,10 +24,16 @@ use_config <- function(path, overwrite = FALSE) {
 
 
   # Replace current config with file at tmp_path
+  curr_path <- xpath_config()
+
+  ## In case there actually is no file at the current path,
+  ## we need to ensure the directory structure exists
+  fs::dir_create(dir_rpg(), recurse = TRUE)
+
   tryCatch({
     fs::file_copy(
       tmp_path,
-      xpath_config(),
+      curr_path,
       overwrite = overwrite
     )
   }, error = function(c) {
