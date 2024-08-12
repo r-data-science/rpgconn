@@ -1,7 +1,12 @@
 test_that("multiplication works", {
 
-  ## Init
-  init_yamls() |> fs::dir_exists() |> expect_true()
+  ## Move existing config to temp and reset after test
+  old_conf <- tempfile(fileext = ".yaml")
+  fs::file_copy(xpath_config(), old_conf)
+  on.exit(
+    fs::file_copy(old_conf, xpath_config(), overwrite = TRUE)
+  )
+
 
   ## Expect Error (already exists and overwrite not TRUE)
   use_config("test_config.yaml") |>
@@ -16,7 +21,6 @@ test_that("multiplication works", {
 
 
   ## Now try with overwrite as TRUE
-  use_config("test_config.yaml", overwrite = TRUE)
-
-
+  use_config("test_config.yaml", overwrite = TRUE) |>
+    expect_no_error()
 })
