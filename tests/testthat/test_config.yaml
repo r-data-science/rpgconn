@@ -1,0 +1,9 @@
+config:
+  local:
+    host: localhost
+    port: 5432
+  prod2:
+    host: host.docker.internal
+    port: 5432
+    user: cabbage
+    password: cabbage

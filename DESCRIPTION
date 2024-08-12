@@ -1,7 +1,7 @@
 Package: rpgconn
 Type: Package
 Title: Simple Database Connection
-Version: 0.2.1
+Version: 0.2.2
 Authors@R: 
     person(given = "Bobby",
            family = "Fatemi",
@@ -12,7 +12,7 @@ Description: Simplified odbc connection management.
 Encoding: UTF-8
 LazyData: true
 License: MIT + file LICENSE
-RoxygenNote: 7.3.1
+RoxygenNote: 7.3.2
 Imports: 
     DBI,
     fs,
