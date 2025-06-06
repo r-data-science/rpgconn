@@ -27,8 +27,9 @@ dbc <- function(cfg = NULL, db = NULL, args_only = FALSE) {
   if (is.null(cfg)) {
     message("\n[---- Checking RPG_CONN_STRING ----]")
     c_envvar <- Sys.getenv("RPG_CONN_STRING", "") # Envvar must be set
-    if (c_envvar == "")
+    if (c_envvar == "") {
       stop("RPG_CONN_STRING not set", call. = FALSE)
+    }
 
     # parse connection string
     cs <- stringr::str_split_1(c_envvar, ";")
@@ -38,39 +39,43 @@ dbc <- function(cfg = NULL, db = NULL, args_only = FALSE) {
     )
     # db optional if using envvar bc it could be specified in the string
     if (!is.null(db)) c_args$dbname <- db
-
   } else {
     # Get args from yaml
     configs <- load_c_args()
-    if (!cfg %in% names(configs))
+    if (!cfg %in% names(configs)) {
       stop("Connection config not found", call. = FALSE)
+    }
     c_args <- configs[[cfg]]
 
-    if (is.null(db))
+    if (is.null(db)) {
       stop("Database name must be specified when using arg cfg", call. = FALSE)
+    }
     c_args$dbname <- db
   }
 
   # Check connection args
-  tryCatch({
-    ck_names <- c("host", "port", "dbname", "user", "password")
-    stopifnot(all(names(c_args) %in% ck_names))
-    stopifnot(all(sapply(c_args, nchar) > 0))
-    stopifnot(length(c_args) < 6)
-  }, error = function(c) {
-    if (is.null(cfg)) {
-      message("RPG_CONN_STRING is invalid")
-      message("\nExpecting of the form: ")
-      message("\tuser=...;password=...;host=...;port=...;dbname=...")
-      message("\nCurrent value set to: ")
-      message("\t", Sys.getenv("RPG_CONN_STRING"), "\n")
-    } else {
-      message("cfg specified is invalid")
-      message("\nCheck config yaml file for correct format")
-      message("\tcall edit_config() to view/edit")
+  tryCatch(
+    {
+      ck_names <- c("host", "port", "dbname", "user", "password")
+      stopifnot(all(names(c_args) %in% ck_names))
+      stopifnot(all(sapply(c_args, nchar) > 0))
+      stopifnot(length(c_args) < 6)
+    },
+    error = function(c) {
+      if (is.null(cfg)) {
+        message("RPG_CONN_STRING is invalid")
+        message("\nExpecting of the form: ")
+        message("\tuser=...;password=...;host=...;port=...;dbname=...")
+        message("\nCurrent value set to: ")
+        message("\t", Sys.getenv("RPG_CONN_STRING"), "\n")
+      } else {
+        message("cfg specified is invalid")
+        message("\nCheck config yaml file for correct format")
+        message("\tcall edit_config() to view/edit")
+      }
+      stop("Unable to make connection", call. = FALSE)
     }
-    stop("Unable to make connection", call. = FALSE)
-  })
+  )
 
   # Add driver
   c_args$drv <- RPostgres::Postgres()
@@ -79,8 +84,9 @@ dbc <- function(cfg = NULL, db = NULL, args_only = FALSE) {
   c_args <- c(c_args, load_c_opts())
 
   # Return args only if requested
-  if (args_only)
+  if (args_only) {
     return(c_args)
+  }
 
   # make connection and return
   message("\n<-------- Making Connection ------->")
@@ -99,10 +105,12 @@ dbd <- function(cn) {
 #' @export
 init_yamls <- function() {
   dir_rpg <- fs::dir_create(dir_rpg())
-  if (!fs::file_exists(xpath_config()))
+  if (!fs::file_exists(xpath_config())) {
     fs::file_copy(xpath_config_templ(), xpath_config())
-  if (!fs::file_exists(xpath_options()))
+  }
+  if (!fs::file_exists(xpath_options())) {
     fs::file_copy(xpath_options_templ(), xpath_options())
+  }
   message(
     "rpgconn: configs created",
     "\n...Update connection configs: edit_config()",
@@ -133,16 +141,18 @@ edit_options <- function() {
 #' @describeIn pgdbconn internal function to read conn args from yaml
 load_c_args <- function() {
   path <- xpath_config()
-  if (!fs::file_exists(path))
+  if (!fs::file_exists(path)) {
     init_yamls()
-  yaml::yaml.load_file(path)$config
+  }
+  yaml::yaml.load_file(path, eval.expr = TRUE)$config
 }
 
 #' @describeIn pgdbconn internal function to read conn options from yaml
 load_c_opts <- function() {
   path <- xpath_options()
-  if (!fs::file_exists(path))
+  if (!fs::file_exists(path)) {
     init_yamls()
+  }
   yaml::yaml.load_file(path)$options
 }
 
@@ -166,4 +176,3 @@ xpath_config_templ <- function() {
 xpath_options_templ <- function() {
   fs::path_package("rpgconn", "extdata", "options.yml")
 }
-
