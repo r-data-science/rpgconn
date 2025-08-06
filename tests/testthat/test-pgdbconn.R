@@ -4,16 +4,16 @@ test_that("Test init yamls", {
     expect_true()
 })
 
-
 test_that("Test Files", {
-  xpath_config_templ() |>
+  # The example configuration templates should be installed in the package's
+  # extdata directory.  Use system.file() to locate them.
+  system.file("extdata", "config.yml", package = "rpgconn") |>
     fs::file_exists() |>
     expect_true()
-  xpath_options_templ() |>
+  system.file("extdata", "options.yml", package = "rpgconn") |>
     fs::file_exists() |>
     expect_true()
 })
-
 
 test_that("Test Edit", {
   edit_config() |>
@@ -23,9 +23,6 @@ test_that("Test Edit", {
     fs::file_exists() |>
     expect_true()
 })
-
-
-
 
 ck_names <- c(
   "host", "port", "dbname", "drv", "connect_timeout",
@@ -42,7 +39,6 @@ test_that("Test conn string validation", {
 
   expect_named(dbc(args_only = TRUE), ck_names, ignore.order = TRUE)
 })
-
 
 test_that("Test conn config validation", {
   expect_error(
