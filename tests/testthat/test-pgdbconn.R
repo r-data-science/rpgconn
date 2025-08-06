@@ -6,8 +6,14 @@ test_that("Test init yamls", {
 
 
 test_that("Test Files", {
-  xpath_config_templ() |> fs::file_exists() |> expect_true()
-  xpath_options_templ() |> fs::file_exists() |> expect_true()
+  # The example configuration templates should be installed in the package's
+  # extdata directory.  Use system.file() to locate them.
+  system.file("extdata", "config.yml", package = "rpgconn") |>
+    fs::file_exists() |>
+    expect_true()
+  system.file("extdata", "options.yml", package = "rpgconn") |>
+    fs::file_exists() |>
+    expect_true()
 })
 
 
