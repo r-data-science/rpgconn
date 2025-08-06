@@ -11,6 +11,11 @@ use_config(path, overwrite = FALSE)
 
 \item{overwrite}{overwrite existing config yaml set prior. Default FALSE}
 }
+\value{
+Invisible character vector giving the path to the active configuration
+  file after it has been replaced.  In non-interactive sessions the file is
+  silently returned.
+}
 \description{
 Use New Config at Path
 }
