@@ -1,18 +1,27 @@
 Package: rpgconn
 Type: Package
-Title: Simple Database Connection
-Version: 0.2.3
+Title: User-Friendly PostgreSQL Connection Management
+Version: 0.2.4
 Authors@R: 
     person(given = "Bobby",
            family = "Fatemi",
            role = c("aut", "cre"),
            email = "bfatemi07@gmail.com")
 Maintainer: Bobby Fatemi <bfatemi07@gmail.com>
-Description: Simplified odbc connection management.
+Description: Provides a user-friendly interface for managing PostgreSQL
+    database connection settings.  The package supplies helper functions to
+    create, edit and load connection and option configuration files stored in a
+    user-specific directory using the 'odbc' and 'RPostgres' back ends.  These
+    helpers make it easy to construct a reproducible connection string from a
+    configuration file, either by reading user-defined YAML files or by parsing
+    an environment variable.
 Encoding: UTF-8
 LazyData: true
 License: MIT + file LICENSE
 RoxygenNote: 7.3.2
+Depends: R (>= 4.1.0)
+URL: https://github.com/r-data-science/rpgconn
+BugReports: https://github.com/r-data-science/rpgconn/issues
 Imports: 
     DBI,
     fs,

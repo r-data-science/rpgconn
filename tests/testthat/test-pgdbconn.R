@@ -1,27 +1,37 @@
-
-
 test_that("Test init yamls", {
-  init_yamls() |> fs::dir_exists() |> expect_true()
+  init_yamls() |>
+    fs::dir_exists() |>
+    expect_true()
 })
 
 
 test_that("Test Files", {
-  xpath_config_templ() |> fs::file_exists() |> expect_true()
-  xpath_options_templ() |> fs::file_exists() |> expect_true()
+  xpath_config_templ() |>
+    fs::file_exists() |>
+    expect_true()
+  xpath_options_templ() |>
+    fs::file_exists() |>
+    expect_true()
 })
 
 
 test_that("Test Edit", {
-  edit_config() |> fs::file_exists() |> expect_true()
-  edit_options() |> fs::file_exists() |> expect_true()
+  edit_config() |>
+    fs::file_exists() |>
+    expect_true()
+  edit_options() |>
+    fs::file_exists() |>
+    expect_true()
 })
 
 
 
 
-ck_names <- c("host", "port", "dbname", "drv", "connect_timeout",
-              "timezone", "application_name", "client_encoding",
-              "user", "password")
+ck_names <- c(
+  "host", "port", "dbname", "drv", "connect_timeout",
+  "timezone", "application_name", "client_encoding",
+  "user", "password"
+)
 
 test_that("Test conn string validation", {
   Sys.setenv(RPG_CONN_STRING = "test")
