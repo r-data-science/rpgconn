@@ -1,7 +1,7 @@
 Package: rpgconn
 Type: Package
 Title: User-Friendly PostgreSQL Connection Management
-Version: 0.2.4
+Version: 0.3.1
 Authors@R: 
     person(given = "Bobby",
            family = "Fatemi",
