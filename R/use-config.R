@@ -4,6 +4,10 @@
 #' @param path path to new config yaml file to use
 #' @param overwrite overwrite existing config yaml set prior. Default FALSE
 #'
+#' @return Invisible character vector giving the path to the active configuration
+#'   file after it has been replaced.  In non-interactive sessions the file is
+#'   silently returned.
+#'
 #' @export
 use_config <- function(path, overwrite = FALSE) {
 
@@ -42,5 +46,8 @@ use_config <- function(path, overwrite = FALSE) {
       c$message
     ), call. = FALSE)
   })
+
+  # return the path invisibly so that tests can assert on it without printing
+  invisible(curr_path)
 }
 

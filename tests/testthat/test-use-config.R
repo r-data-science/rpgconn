@@ -2,9 +2,10 @@ test_that("multiplication works", {
 
   ## Move existing config to temp and reset after test
   old_conf <- tempfile(fileext = ".yaml")
-  fs::file_copy(xpath_config(), old_conf)
+  conf_path <- fs::path(dir_rpg(), "config.yml")
+  fs::file_copy(conf_path, old_conf)
   on.exit(
-    fs::file_copy(old_conf, xpath_config(), overwrite = TRUE)
+    fs::file_copy(old_conf, conf_path, overwrite = TRUE)
   )
 
 
@@ -14,7 +15,7 @@ test_that("multiplication works", {
 
 
   ## Remove Existing file and try again
-  fs::file_delete(xpath_config())
+  fs::file_delete(conf_path)
 
   use_config("test_config.yaml") |>
     expect_no_error()

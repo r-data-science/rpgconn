@@ -123,22 +123,40 @@ init_yamls <- function() {
 #' @describeIn pgdbconn get the path to the rpg settings directory
 #' @export
 dir_rpg <- function() {
-  fs::path(Sys.getenv("HOME", "."), ".rpgconn")
+  # Use a user-specific configuration directory compliant with CRAN policies
+  # tools::R_user_dir creates a directory unique to this package in a standard
+  # per-user location. See ?tools::R_user_dir for details.
+  tools::R_user_dir("rpgconn", which = "config")
 }
 
 #' @describeIn pgdbconn edit the internally configured connection parameters
 #' @export
 edit_config <- function() {
-  usethis::edit_file(xpath_config())
+  f <- xpath_config()
+  if (interactive()) {
+    # Only launch the editor in interactive sessions (e.g. at the console).
+    usethis::edit_file(f)
+  } else {
+    message("edit_config() called in non-interactive mode; returning file path without opening an editor.")
+  }
+  invisible(f)
 }
 
 #' @describeIn pgdbconn edit the internally configured connection options
 #' @export
 edit_options <- function() {
-  usethis::edit_file(xpath_options())
+  f <- xpath_options()
+  if (interactive()) {
+    # Only launch the editor in interactive sessions (e.g. at the console).
+    usethis::edit_file(f)
+  } else {
+    message("edit_options() called in non-interactive mode; returning file path without opening an editor.")
+  }
+  invisible(f)
 }
 
 #' @describeIn pgdbconn internal function to read conn args from yaml
+#' @noRd
 load_c_args <- function() {
   path <- xpath_config()
   if (!fs::file_exists(path)) {
@@ -148,6 +166,7 @@ load_c_args <- function() {
 }
 
 #' @describeIn pgdbconn internal function to read conn options from yaml
+#' @noRd
 load_c_opts <- function() {
   path <- xpath_options()
   if (!fs::file_exists(path)) {
@@ -157,22 +176,26 @@ load_c_opts <- function() {
 }
 
 #' @describeIn pgdbconn internal function to get path of config file
+#' @noRd
 xpath_config <- function() {
-  fs::path(Sys.getenv("HOME"), ".rpgconn/config.yml")
+  fs::path(dir_rpg(), "config.yml")
 }
 
 #' @describeIn pgdbconn internal function to get path of options file
+#' @noRd
 xpath_options <- function() {
-  fs::path(Sys.getenv("HOME"), ".rpgconn/options.yml")
+  fs::path(dir_rpg(), "options.yml")
 }
 
 
 #' @describeIn pgdbconn internal function to get path of config file template
+#' @noRd
 xpath_config_templ <- function() {
   fs::path_package("rpgconn", "extdata", "config.yml")
 }
 
 #' @describeIn pgdbconn internal function to get path of options file template
+#' @noRd
 xpath_options_templ <- function() {
   fs::path_package("rpgconn", "extdata", "options.yml")
 }
