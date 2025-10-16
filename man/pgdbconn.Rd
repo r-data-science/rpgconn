@@ -10,7 +10,7 @@
 \alias{edit_options}
 \title{Database Connect/Disconnect}
 \usage{
-dbc(cfg = NULL, db = NULL, args_only = FALSE, path = NULL)
+dbc(cfg = NULL, db = NULL, args_only = FALSE, cfg_path = NULL, opt_path = NULL)
 
 dbd(cn)
 
@@ -29,7 +29,9 @@ edit_options()
 
 \item{args_only}{If TRUE, only return the connection arguments (Default FALSE will make the connection)}
 
-\item{path}{optional path to override default package config file.}
+\item{cfg_path}{optional path to override default db config file.}
+
+\item{opt_path}{optional path to override default db options file.}
 
 \item{cn}{a database connection object}
 }

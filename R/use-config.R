@@ -13,7 +13,7 @@ use_config <- function(path, overwrite = FALSE) {
     {
       # write input yaml at path to temp yaml file
       tmp <- tempfile(fileext = ".yml")
-      new_yaml <- yaml::read_yaml(path, eval.expr = TRUE)
+      new_yaml <- yaml::read_yaml(path)
       yaml::write_yaml(new_yaml, file = tmp)
       tmp
     },
