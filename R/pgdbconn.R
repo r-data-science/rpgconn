@@ -82,7 +82,7 @@ dbc <- function(cfg = NULL, db = NULL, args_only = FALSE, path = NULL) {
   c_args$drv <- RPostgres::Postgres()
 
   # Add options
-  c_args <- c(c_args, load_c_opts())
+  c_args <- c(c_args, load_c_opts(path))
 
   # Return args only if requested
   if (args_only) {
