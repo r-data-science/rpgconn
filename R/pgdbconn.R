@@ -166,7 +166,7 @@ load_c_args <- function(cfg_path = NULL) {
   if (!fs::file_exists(cfg_path)) {
     init_yamls()
   }
-  yaml::yaml.load_file(cfg_path)$config
+  yaml::yaml.load_file(cfg_path, eval.expr = TRUE)$config
 }
 
 #' @describeIn pgdbconn internal function to read conn options from yaml
