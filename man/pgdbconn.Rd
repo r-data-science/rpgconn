@@ -10,7 +10,7 @@
 \alias{edit_options}
 \title{Database Connect/Disconnect}
 \usage{
-dbc(cfg = NULL, db = NULL, args_only = FALSE)
+dbc(cfg = NULL, db = NULL, args_only = FALSE, cfg_path = NULL, opt_path = NULL)
 
 dbd(cn)
 
@@ -29,6 +29,10 @@ edit_options()
 
 \item{args_only}{If TRUE, only return the connection arguments (Default FALSE will make the connection)}
 
+\item{cfg_path}{optional path to override default db config file.}
+
+\item{opt_path}{optional path to override default db options file.}
+
 \item{cn}{a database connection object}
 }
 \value{
@@ -43,7 +47,7 @@ Database Connect/Disconnect
 
 \item \code{dbd()}: Disconnect from a database
 
-\item \code{init_yamls()}: edit the internally configured connection parameters
+\item \code{init_yamls()}: Initialize connection files
 
 \item \code{dir_rpg()}: get the path to the rpg settings directory
 

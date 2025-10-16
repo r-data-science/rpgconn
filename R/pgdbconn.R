@@ -4,6 +4,8 @@
 #' @param args_only If TRUE, only return the connection arguments (Default FALSE will make the connection)
 #' @param cn a database connection object
 #' @param cfg a connection config name used when loading connection args from internally stored yaml
+#' @param cfg_path optional path to override default db config file.
+#' @param opt_path optional path to override default db options file.
 #'
 #' @importFrom RPostgres Postgres
 #' @importFrom DBI dbConnect dbDisconnect
@@ -22,7 +24,7 @@ NULL
 
 #' @describeIn pgdbconn Connect to a database or return the connection arguments
 #' @export
-dbc <- function(cfg = NULL, db = NULL, args_only = FALSE) {
+dbc <- function(cfg = NULL, db = NULL, args_only = FALSE, cfg_path = NULL, opt_path = NULL) {
   # if cfg is null, use envvar
   if (is.null(cfg)) {
     message("\n[---- Checking RPG_CONN_STRING ----]")
@@ -41,7 +43,7 @@ dbc <- function(cfg = NULL, db = NULL, args_only = FALSE) {
     if (!is.null(db)) c_args$dbname <- db
   } else {
     # Get args from yaml
-    configs <- load_c_args()
+    configs <- load_c_args(cfg_path)
     if (!cfg %in% names(configs)) {
       stop("Connection config not found", call. = FALSE)
     }
@@ -81,7 +83,7 @@ dbc <- function(cfg = NULL, db = NULL, args_only = FALSE) {
   c_args$drv <- RPostgres::Postgres()
 
   # Add options
-  c_args <- c(c_args, load_c_opts())
+  c_args <- c(c_args, load_c_opts(opt_path))
 
   # Return args only if requested
   if (args_only) {
@@ -101,7 +103,7 @@ dbd <- function(cn) {
 }
 
 
-#' @describeIn pgdbconn edit the internally configured connection parameters
+#' @describeIn pgdbconn Initialize connection files
 #' @export
 init_yamls <- function() {
   dir_rpg <- fs::dir_create(dir_rpg())
@@ -157,22 +159,26 @@ edit_options <- function() {
 
 #' @describeIn pgdbconn internal function to read conn args from yaml
 #' @noRd
-load_c_args <- function() {
-  path <- xpath_config()
-  if (!fs::file_exists(path)) {
+load_c_args <- function(cfg_path = NULL) {
+  if (is.null(cfg_path)) {
+    cfg_path <- xpath_config()
+  }
+  if (!fs::file_exists(cfg_path)) {
     init_yamls()
   }
-  yaml::yaml.load_file(path, eval.expr = TRUE)$config
+  yaml::yaml.load_file(cfg_path)$config
 }
 
 #' @describeIn pgdbconn internal function to read conn options from yaml
 #' @noRd
-load_c_opts <- function() {
-  path <- xpath_options()
-  if (!fs::file_exists(path)) {
+load_c_opts <- function(opt_path = NULL) {
+  if (is.null(opt_path)) {
+    opt_path <- xpath_options()
+  }
+  if (!fs::file_exists(opt_path)) {
     init_yamls()
   }
-  yaml::yaml.load_file(path)$options
+  yaml::yaml.load_file(opt_path)$options
 }
 
 #' @describeIn pgdbconn internal function to get path of config file

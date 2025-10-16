@@ -2,8 +2,10 @@ CMD
 Codecov
 RPG
 RPostgres
+RoxygenNote
 args
 dbname
 odbc
+pgdbconn
 rpg
 yaml
