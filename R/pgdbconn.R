@@ -4,6 +4,7 @@
 #' @param args_only If TRUE, only return the connection arguments (Default FALSE will make the connection)
 #' @param cn a database connection object
 #' @param cfg a connection config name used when loading connection args from internally stored yaml
+#' @param path optional path to override default package config file.
 #'
 #' @importFrom RPostgres Postgres
 #' @importFrom DBI dbConnect dbDisconnect
@@ -22,7 +23,7 @@ NULL
 
 #' @describeIn pgdbconn Connect to a database or return the connection arguments
 #' @export
-dbc <- function(cfg = NULL, db = NULL, args_only = FALSE) {
+dbc <- function(cfg = NULL, db = NULL, args_only = FALSE, path = NULL) {
   # if cfg is null, use envvar
   if (is.null(cfg)) {
     message("\n[---- Checking RPG_CONN_STRING ----]")
@@ -41,7 +42,7 @@ dbc <- function(cfg = NULL, db = NULL, args_only = FALSE) {
     if (!is.null(db)) c_args$dbname <- db
   } else {
     # Get args from yaml
-    configs <- load_c_args()
+    configs <- load_c_args(path)
     if (!cfg %in% names(configs)) {
       stop("Connection config not found", call. = FALSE)
     }
@@ -101,7 +102,7 @@ dbd <- function(cn) {
 }
 
 
-#' @describeIn pgdbconn edit the internally configured connection parameters
+#' @describeIn pgdbconn Initialize connection files
 #' @export
 init_yamls <- function() {
   dir_rpg <- fs::dir_create(dir_rpg())
@@ -157,8 +158,10 @@ edit_options <- function() {
 
 #' @describeIn pgdbconn internal function to read conn args from yaml
 #' @noRd
-load_c_args <- function() {
-  path <- xpath_config()
+load_c_args <- function(path = NULL) {
+  if (is.null(path)) {
+    path <- xpath_config()
+  }
   if (!fs::file_exists(path)) {
     init_yamls()
   }
@@ -167,8 +170,10 @@ load_c_args <- function() {
 
 #' @describeIn pgdbconn internal function to read conn options from yaml
 #' @noRd
-load_c_opts <- function() {
-  path <- xpath_options()
+load_c_opts <- function(path = NULL) {
+  if (is.null(path)) {
+    path <- xpath_options()
+  }
   if (!fs::file_exists(path)) {
     init_yamls()
   }
