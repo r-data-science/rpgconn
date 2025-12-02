@@ -97,3 +97,135 @@ test_that("Test custom opt_path parameter", {
 
   unlink(temp_opts)
 })
+
+# Tests for robust connection string parsing
+test_that("Parse URI format with postgresql:// prefix", {
+  conn_str <- "postgresql://testuser:testpass@localhost:5432/testdb"
+  Sys.setenv(RPG_CONN_STRING = conn_str)
+  
+  args <- dbc(args_only = TRUE)
+  
+  expect_equal(args$user, "testuser")
+  expect_equal(args$password, "testpass")
+  expect_equal(args$host, "localhost")
+  expect_equal(args$port, "5432")
+  expect_equal(args$dbname, "testdb")
+})
+
+test_that("Parse URI format with postgres:// prefix", {
+  conn_str <- "postgres://testuser:testpass@localhost:5432/testdb"
+  Sys.setenv(RPG_CONN_STRING = conn_str)
+  
+  args <- dbc(args_only = TRUE)
+  
+  expect_equal(args$user, "testuser")
+  expect_equal(args$password, "testpass")
+  expect_equal(args$host, "localhost")
+  expect_equal(args$port, "5432")
+  expect_equal(args$dbname, "testdb")
+})
+
+test_that("Parse URI format without password", {
+  conn_str <- "postgresql://testuser@localhost:5432/testdb"
+  Sys.setenv(RPG_CONN_STRING = conn_str)
+  
+  args <- dbc(args_only = TRUE)
+  
+  expect_equal(args$user, "testuser")
+  expect_null(args$password)
+  expect_equal(args$host, "localhost")
+  expect_equal(args$port, "5432")
+  expect_equal(args$dbname, "testdb")
+})
+
+test_that("Parse URI format with query parameters", {
+  conn_str <- "postgresql://testuser:testpass@localhost:5432/testdb?sslmode=require"
+  Sys.setenv(RPG_CONN_STRING = conn_str)
+  
+  args <- dbc(args_only = TRUE)
+  
+  expect_equal(args$user, "testuser")
+  expect_equal(args$password, "testpass")
+  expect_equal(args$host, "localhost")
+  expect_equal(args$port, "5432")
+  expect_equal(args$dbname, "testdb")
+  expect_equal(args$sslmode, "require")
+})
+
+test_that("Parse URI format with multiple query parameters", {
+  conn_str <- "postgresql://testuser@localhost/testdb?sslmode=require&connect_timeout=10"
+  Sys.setenv(RPG_CONN_STRING = conn_str)
+  
+  args <- dbc(args_only = TRUE)
+  
+  expect_equal(args$user, "testuser")
+  expect_equal(args$host, "localhost")
+  expect_equal(args$dbname, "testdb")
+  expect_equal(args$sslmode, "require")
+  expect_equal(args$connect_timeout, "10")
+})
+
+test_that("Parse URI format with URL-encoded characters", {
+  # Password with @ and : characters (URL-encoded)
+  conn_str <- "postgresql://testuser:p%40ss%3Aword@localhost:5432/testdb"
+  Sys.setenv(RPG_CONN_STRING = conn_str)
+  
+  args <- dbc(args_only = TRUE)
+  
+  expect_equal(args$user, "testuser")
+  expect_equal(args$password, "p@ss:word")
+  expect_equal(args$host, "localhost")
+  expect_equal(args$port, "5432")
+  expect_equal(args$dbname, "testdb")
+})
+
+test_that("Parse keyword/value format with semicolons (legacy)", {
+  conn_str <- "user=testuser;password=testpass;host=localhost;port=5432;dbname=testdb"
+  Sys.setenv(RPG_CONN_STRING = conn_str)
+  
+  args <- dbc(args_only = TRUE)
+  
+  expect_equal(args$user, "testuser")
+  expect_equal(args$password, "testpass")
+  expect_equal(args$host, "localhost")
+  expect_equal(args$port, "5432")
+  expect_equal(args$dbname, "testdb")
+})
+
+test_that("Parse keyword/value format with whitespace", {
+  conn_str <- "host=localhost user=testuser password=testpass dbname=testdb port=5432"
+  Sys.setenv(RPG_CONN_STRING = conn_str)
+  
+  args <- dbc(args_only = TRUE)
+  
+  expect_equal(args$user, "testuser")
+  expect_equal(args$password, "testpass")
+  expect_equal(args$host, "localhost")
+  expect_equal(args$port, "5432")
+  expect_equal(args$dbname, "testdb")
+})
+
+test_that("Parse keyword/value format with quoted values", {
+  conn_str <- "host='my host' user=testuser dbname='test db' port=5432"
+  Sys.setenv(RPG_CONN_STRING = conn_str)
+  
+  args <- dbc(args_only = TRUE)
+  
+  expect_equal(args$host, "my host")
+  expect_equal(args$user, "testuser")
+  expect_equal(args$dbname, "test db")
+  expect_equal(args$port, "5432")
+})
+
+test_that("URI format without port defaults correctly", {
+  conn_str <- "postgresql://testuser:testpass@localhost/testdb"
+  Sys.setenv(RPG_CONN_STRING = conn_str)
+  
+  args <- dbc(args_only = TRUE)
+  
+  expect_equal(args$user, "testuser")
+  expect_equal(args$password, "testpass")
+  expect_equal(args$host, "localhost")
+  expect_null(args$port)
+  expect_equal(args$dbname, "testdb")
+})

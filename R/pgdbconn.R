@@ -1,3 +1,144 @@
+#' Parse PostgreSQL Connection String
+#'
+#' @param conn_str A PostgreSQL connection string in various formats
+#'
+#' @return A named list of connection parameters
+#' @noRd
+parse_conn_string <- function(conn_str) {
+  conn_str <- trimws(conn_str)
+  
+  # Check if it's a URI format (postgresql:// or postgres://)
+  if (grepl("^postgres(ql)?://", conn_str, ignore.case = TRUE)) {
+    return(parse_uri_conn_string(conn_str))
+  }
+  
+  # Otherwise, parse as keyword/value format
+  return(parse_kv_conn_string(conn_str))
+}
+
+#' Parse URI-style PostgreSQL Connection String
+#'
+#' @param uri_str A PostgreSQL URI connection string
+#'
+#' @return A named list of connection parameters
+#' @noRd
+parse_uri_conn_string <- function(uri_str) {
+  c_args <- list()
+  
+  # Extract query parameters if present
+  query_params <- NULL
+  if (grepl("\\?", uri_str)) {
+    parts <- strsplit(uri_str, "\\?", fixed = FALSE)[[1]]
+    uri_str <- parts[1]
+    if (length(parts) > 1) {
+      query_params <- parts[2]
+    }
+  }
+  
+  # Remove the scheme (postgresql:// or postgres://)
+  uri_str <- sub("^postgres(ql)?://", "", uri_str, ignore.case = TRUE)
+  
+  # Extract user:password@host:port/dbname
+  # Pattern: [user[:password]@]host[:port]/dbname
+  
+  # Check for authentication part (user[:password]@)
+  if (grepl("@", uri_str)) {
+    parts <- strsplit(uri_str, "@", fixed = TRUE)[[1]]
+    auth_part <- parts[1]
+    host_part <- parts[2]
+    
+    # Parse authentication
+    if (grepl(":", auth_part, fixed = TRUE)) {
+      auth_parts <- strsplit(auth_part, ":", fixed = TRUE)[[1]]
+      c_args$user <- utils::URLdecode(auth_parts[1])
+      c_args$password <- utils::URLdecode(auth_parts[2])
+    } else {
+      c_args$user <- utils::URLdecode(auth_part)
+    }
+  } else {
+    host_part <- uri_str
+  }
+  
+  # Parse host:port/dbname
+  if (grepl("/", host_part, fixed = TRUE)) {
+    parts <- strsplit(host_part, "/", fixed = TRUE)[[1]]
+    host_port <- parts[1]
+    c_args$dbname <- utils::URLdecode(parts[2])
+    
+    # Parse host and port
+    if (grepl(":", host_port, fixed = TRUE)) {
+      host_port_parts <- strsplit(host_port, ":", fixed = TRUE)[[1]]
+      c_args$host <- host_port_parts[1]
+      c_args$port <- host_port_parts[2]
+    } else {
+      c_args$host <- host_port
+    }
+  } else {
+    # No database specified, just host:port
+    if (grepl(":", host_part, fixed = TRUE)) {
+      host_port_parts <- strsplit(host_part, ":", fixed = TRUE)[[1]]
+      c_args$host <- host_port_parts[1]
+      c_args$port <- host_port_parts[2]
+    } else {
+      c_args$host <- host_part
+    }
+  }
+  
+  # Parse query parameters
+  if (!is.null(query_params)) {
+    params <- strsplit(query_params, "&", fixed = TRUE)[[1]]
+    for (param in params) {
+      if (grepl("=", param, fixed = TRUE)) {
+        kv <- strsplit(param, "=", fixed = TRUE)[[1]]
+        key <- utils::URLdecode(kv[1])
+        value <- utils::URLdecode(kv[2])
+        c_args[[key]] <- value
+      }
+    }
+  }
+  
+  return(c_args)
+}
+
+#' Parse Keyword/Value PostgreSQL Connection String
+#'
+#' @param kv_str A PostgreSQL keyword/value connection string
+#'
+#' @return A named list of connection parameters
+#' @noRd
+parse_kv_conn_string <- function(kv_str) {
+  # Support both semicolon and whitespace as delimiters
+  # First try semicolon (legacy format)
+  if (grepl(";", kv_str)) {
+    cs <- stringr::str_split_1(kv_str, ";")
+  } else {
+    # Split by whitespace, handling quoted values
+    # Simple approach: split by whitespace, then handle quotes
+    cs <- strsplit(trimws(kv_str), "\\s+")[[1]]
+  }
+  
+  # Parse key=value pairs
+  c_args <- list()
+  for (pair in cs) {
+    pair <- trimws(pair)
+    if (nchar(pair) == 0) next
+    
+    if (grepl("=", pair)) {
+      # Extract key and value
+      key <- stringr::str_extract(pair, ".+(?=\\=)")
+      value <- stringr::str_extract(pair, "(?<=\\=).+")
+      
+      # Remove quotes if present
+      if (!is.na(value)) {
+        value <- gsub("^['\"]|['\"]$", "", value)
+        c_args[[key]] <- value
+      }
+    }
+  }
+  
+  return(c_args)
+}
+
 #' Database Connect/Disconnect
 #'
 #' @param db Database name. Default of NULL will utilize the dbname in the connection string
@@ -33,12 +174,9 @@ dbc <- function(cfg = NULL, db = NULL, args_only = FALSE, cfg_path = NULL, opt_p
       stop("RPG_CONN_STRING not set", call. = FALSE)
     }
 
-    # parse connection string
-    cs <- stringr::str_split_1(c_envvar, ";")
-    c_args <- stats::setNames(
-      as.list(stringr::str_extract(cs, "(?<=\\=).+")),
-      stringr::str_extract(cs, ".+(?=\\=)")
-    )
+    # parse connection string using new robust parser
+    c_args <- parse_conn_string(c_envvar)
+    
     # db optional if using envvar bc it could be specified in the string
     if (!is.null(db)) c_args$dbname <- db
   } else {
@@ -56,18 +194,27 @@ dbc <- function(cfg = NULL, db = NULL, args_only = FALSE, cfg_path = NULL, opt_p
   }
 
   # Check connection args
+  # Allow additional parameters beyond the core five for URI query params
   tryCatch(
     {
-      ck_names <- c("host", "port", "dbname", "user", "password")
-      stopifnot(all(names(c_args) %in% ck_names))
+      ck_names <- c("host", "port", "dbname", "user", "password", 
+                    "sslmode", "connect_timeout", "application_name", 
+                    "options", "target_session_attrs")
+      # Only check that recognized names are used and have non-empty values
+      unknown_params <- setdiff(names(c_args), ck_names)
+      if (length(unknown_params) > 0) {
+        warning("Unknown connection parameters: ", paste(unknown_params, collapse = ", "))
+      }
       stopifnot(all(sapply(c_args, nchar) > 0))
-      stopifnot(length(c_args) < 6)
     },
     error = function(c) {
       if (is.null(cfg)) {
         message("RPG_CONN_STRING is invalid")
-        message("\nExpecting of the form: ")
-        message("\tuser=...;password=...;host=...;port=...;dbname=...")
+        message("\nExpecting one of the following formats: ")
+        message("\tURI: postgresql://user:pass@host:5432/dbname")
+        message("\tURI with params: postgresql://user@host/db?sslmode=require")
+        message("\tKeyword/value (semicolon): user=...;password=...;host=...;port=...;dbname=...")
+        message("\tKeyword/value (whitespace): host=... user=... dbname=...")
         message("\nCurrent value set to: ")
         message("\t", Sys.getenv("RPG_CONN_STRING"), "\n")
       } else {
