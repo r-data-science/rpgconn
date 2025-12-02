@@ -49,9 +49,10 @@ parse_uri_conn_string <- function(uri_str) {
     
     # Parse authentication
     if (grepl(":", auth_part, fixed = TRUE)) {
-      auth_parts <- strsplit(auth_part, ":", fixed = TRUE)[[1]]
-      c_args$user <- utils::URLdecode(auth_parts[1])
-      c_args$password <- utils::URLdecode(auth_parts[2])
+      # Split only on the first colon to handle passwords with colons
+      colon_pos <- regexpr(":", auth_part, fixed = TRUE)[1]
+      c_args$user <- utils::URLdecode(substr(auth_part, 1, colon_pos - 1))
+      c_args$password <- utils::URLdecode(substr(auth_part, colon_pos + 1, nchar(auth_part)))
     } else {
       c_args$user <- utils::URLdecode(auth_part)
     }
@@ -89,9 +90,10 @@ parse_uri_conn_string <- function(uri_str) {
     params <- strsplit(query_params, "&", fixed = TRUE)[[1]]
     for (param in params) {
       if (grepl("=", param, fixed = TRUE)) {
-        kv <- strsplit(param, "=", fixed = TRUE)[[1]]
-        key <- utils::URLdecode(kv[1])
-        value <- utils::URLdecode(kv[2])
+        # Split only on the first equals to handle values with embedded equals
+        eq_pos <- regexpr("=", param, fixed = TRUE)[1]
+        key <- utils::URLdecode(substr(param, 1, eq_pos - 1))
+        value <- utils::URLdecode(substr(param, eq_pos + 1, nchar(param)))
         c_args[[key]] <- value
       }
     }

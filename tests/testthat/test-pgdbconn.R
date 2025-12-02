@@ -229,3 +229,28 @@ test_that("URI format without port defaults correctly", {
   expect_null(args$port)
   expect_equal(args$dbname, "testdb")
 })
+
+test_that("URI format with password containing colon", {
+  # Password: pass:word:123
+  conn_str <- "postgresql://testuser:pass%3Aword%3A123@localhost:5432/testdb"
+  Sys.setenv(RPG_CONN_STRING = conn_str)
+  
+  args <- dbc(args_only = TRUE)
+  
+  expect_equal(args$user, "testuser")
+  expect_equal(args$password, "pass:word:123")
+  expect_equal(args$host, "localhost")
+  expect_equal(args$port, "5432")
+  expect_equal(args$dbname, "testdb")
+})
+
+test_that("URI format with query parameter value containing equals", {
+  # Query parameter with value containing =
+  conn_str <- "postgresql://testuser@localhost/testdb?options=-c%20search_path%3Dschema1%2Cschema2"
+  Sys.setenv(RPG_CONN_STRING = conn_str)
+  
+  args <- dbc(args_only = TRUE)
+  
+  expect_equal(args$user, "testuser")
+  expect_equal(args$options, "-c search_path=schema1,schema2")
+})
