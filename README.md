@@ -55,17 +55,17 @@ library(rpgconn)
 # Open connection
 cn <- dbc("some_database")
 
-# Safe SELECT query with parameters
+# Safe SELECT query with parameters (PostgreSQL uses $1, $2, etc.)
 users <- db_query_safe(
   cn,
-  "SELECT * FROM users WHERE age > ? AND city = ?",
+  "SELECT * FROM users WHERE age > $1 AND city = $2",
   params = list(25, "New York")
 )
 
 # Safe INSERT statement
 db_execute_safe(
   cn,
-  "INSERT INTO users (name, email) VALUES (?, ?)",
+  "INSERT INTO users (name, email) VALUES ($1, $2)",
   params = list("John Doe", "john@example.com")
 )
 
@@ -76,14 +76,14 @@ new_users <- data.frame(
 )
 db_execute_safe(
   cn,
-  "INSERT INTO users (name, email) VALUES (?, ?)",
+  "INSERT INTO users (name, email) VALUES ($1, $2)",
   params = new_users
 )
 
 # Safe UPDATE statement
 db_execute_safe(
   cn,
-  "UPDATE users SET status = ? WHERE age < ?",
+  "UPDATE users SET status = $1 WHERE age < $2",
   params = list("active", 18)
 )
 

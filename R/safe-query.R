@@ -21,8 +21,9 @@
 #' that don't return results but return the number of affected rows.
 #' It supports both single execution (with a list) and batch execution (with a data frame).
 #'
-#' Parameter placeholders in the query should be \code{?} for positional binding
-#' (or \code{$1}, \code{$2}, etc. depending on your database backend).
+#' Parameter placeholders in the query depend on your database backend.
+#' For PostgreSQL (via RPostgres), use \code{$1}, \code{$2}, etc. for positional parameters.
+#' For other databases, \code{?} may be used for positional binding.
 #' The \code{params} argument should contain values in the same order as
 #' the placeholders appear in the query.
 #'
@@ -40,17 +41,17 @@
 #' \dontrun{
 #' cn <- dbc("mydb")
 #'
-#' # Safe SELECT query with parameters
+#' # Safe SELECT query with parameters (using PostgreSQL placeholders)
 #' users <- db_query_safe(
 #'   cn,
-#'   "SELECT * FROM users WHERE age > ? AND city = ?",
+#'   "SELECT * FROM users WHERE age > $1 AND city = $2",
 #'   params = list(25, "New York")
 #' )
 #'
 #' # Safe INSERT statement
 #' db_execute_safe(
 #'   cn,
-#'   "INSERT INTO users (name, email) VALUES (?, ?)",
+#'   "INSERT INTO users (name, email) VALUES ($1, $2)",
 #'   params = list("John Doe", "john@example.com")
 #' )
 #'
@@ -61,7 +62,7 @@
 #' )
 #' db_execute_safe(
 #'   cn,
-#'   "INSERT INTO users (name, email) VALUES (?, ?)",
+#'   "INSERT INTO users (name, email) VALUES ($1, $2)",
 #'   params = new_users
 #' )
 #'
@@ -74,7 +75,7 @@ NULL
 #' @export
 db_query_safe <- function(cn, query, params = NULL, n = -1) {
   # Validate inputs
-  if (!inherits(cn, "PqConnection")) {
+  if (!inherits(cn, "DBIConnection")) {
     stop("cn must be a valid database connection object", call. = FALSE)
   }
   if (!is.character(query) || length(query) != 1) {
@@ -108,7 +109,7 @@ db_query_safe <- function(cn, query, params = NULL, n = -1) {
 #' @export
 db_execute_safe <- function(cn, query, params = NULL) {
   # Validate inputs
-  if (!inherits(cn, "PqConnection")) {
+  if (!inherits(cn, "DBIConnection")) {
     stop("cn must be a valid database connection object", call. = FALSE)
   }
   if (!is.character(query) || length(query) != 1) {

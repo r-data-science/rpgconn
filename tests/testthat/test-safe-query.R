@@ -6,7 +6,7 @@ test_that("db_query_safe validates inputs", {
   )
   
   # Test with invalid query
-  mock_cn <- structure(list(), class = "PqConnection")
+  mock_cn <- structure(list(), class = "DBIConnection")
   expect_error(
     db_query_safe(mock_cn, c("query1", "query2")),
     "query must be a single character string"
@@ -18,15 +18,15 @@ test_that("db_query_safe validates inputs", {
 })
 
 test_that("db_query_safe validates params format", {
-  mock_cn <- structure(list(), class = "PqConnection")
+  mock_cn <- structure(list(), class = "DBIConnection")
   
   # Test with invalid params (not a list)
   expect_error(
-    db_query_safe(mock_cn, "SELECT * FROM test WHERE id = ?", params = "not_a_list"),
+    db_query_safe(mock_cn, "SELECT * FROM test WHERE id = $1", params = "not_a_list"),
     "params must be a list"
   )
   expect_error(
-    db_query_safe(mock_cn, "SELECT * FROM test WHERE id = ?", params = 123),
+    db_query_safe(mock_cn, "SELECT * FROM test WHERE id = $1", params = 123),
     "params must be a list"
   )
 })
@@ -39,7 +39,7 @@ test_that("db_execute_safe validates inputs", {
   )
   
   # Test with invalid query
-  mock_cn <- structure(list(), class = "PqConnection")
+  mock_cn <- structure(list(), class = "DBIConnection")
   expect_error(
     db_execute_safe(mock_cn, c("query1", "query2")),
     "query must be a single character string"
@@ -51,15 +51,15 @@ test_that("db_execute_safe validates inputs", {
 })
 
 test_that("db_execute_safe validates params format", {
-  mock_cn <- structure(list(), class = "PqConnection")
+  mock_cn <- structure(list(), class = "DBIConnection")
   
   # Test with invalid params (not a list or data frame)
   expect_error(
-    db_execute_safe(mock_cn, "INSERT INTO test VALUES (?)", params = "not_valid"),
+    db_execute_safe(mock_cn, "INSERT INTO test VALUES ($1)", params = "not_valid"),
     "params must be a list or data frame"
   )
   expect_error(
-    db_execute_safe(mock_cn, "INSERT INTO test VALUES (?)", params = 123),
+    db_execute_safe(mock_cn, "INSERT INTO test VALUES ($1)", params = 123),
     "params must be a list or data frame"
   )
 })
