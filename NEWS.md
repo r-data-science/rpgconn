@@ -1,3 +1,12 @@
+# rpgconn 0.3.3 (Development)
+
+## New Features
+
+* Added `db_query_safe()` function for executing parameterized SELECT queries safely
+* Added `db_execute_safe()` function for executing parameterized INSERT/UPDATE/DELETE statements safely
+* Both functions support batch operations via data frame parameters
+* Parameterized queries use DBI's binding mechanism to prevent SQL injection attacks
+
 # rpgconn 0.3.2
 
 ## New Features

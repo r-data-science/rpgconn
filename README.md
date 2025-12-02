@@ -29,12 +29,13 @@ remotes::install_github("r-data-science/rpgconn")
 
 ## Example
 
+### Basic Connection
 
 ```r
 library(rpgconn)
 library(DBI)
 
-#open connection
+# Open connection
 cn <- dbc("some_database")
 
 # List tables
@@ -43,3 +44,51 @@ dbListTables(cn)
 # Close connection
 dbd(cn)
 ```
+
+### Safe Parameterized Queries
+
+rpgconn provides functions for executing parameterized queries safely, protecting against SQL injection attacks:
+
+```r
+library(rpgconn)
+
+# Open connection
+cn <- dbc("some_database")
+
+# Safe SELECT query with parameters
+users <- db_query_safe(
+  cn,
+  "SELECT * FROM users WHERE age > ? AND city = ?",
+  params = list(25, "New York")
+)
+
+# Safe INSERT statement
+db_execute_safe(
+  cn,
+  "INSERT INTO users (name, email) VALUES (?, ?)",
+  params = list("John Doe", "john@example.com")
+)
+
+# Batch INSERT - insert multiple rows at once
+new_users <- data.frame(
+  name = c("Alice", "Bob", "Charlie"),
+  email = c("alice@example.com", "bob@example.com", "charlie@example.com")
+)
+db_execute_safe(
+  cn,
+  "INSERT INTO users (name, email) VALUES (?, ?)",
+  params = new_users
+)
+
+# Safe UPDATE statement
+db_execute_safe(
+  cn,
+  "UPDATE users SET status = ? WHERE age < ?",
+  params = list("active", 18)
+)
+
+# Close connection
+dbd(cn)
+```
+
+The parameterized query functions (`db_query_safe` and `db_execute_safe`) use DBI's parameter binding mechanism to ensure that user input is properly escaped and cannot be used to inject malicious SQL code.
