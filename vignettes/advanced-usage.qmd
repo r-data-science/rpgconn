@@ -1,0 +1,853 @@
+---
+title: "Advanced Usage Guide"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Advanced Usage Guide}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE
+)
+```
+
+## Connection String Formats Reference
+
+### URI Format (Recommended)
+
+The full PostgreSQL URI format:
+
+```
+postgresql://[user[:password]@][host][:port][/database][?param=value[&param=value...]]
+```
+
+#### Minimal
+
+```r
+"postgresql://localhost/mydb"
+# Uses: default port (5432), no auth, database 'mydb'
+```
+
+#### With Authentication
+
+```r
+"postgresql://alice:secret@db.example.com:5432/production"
+# user: alice
+# password: secret
+# host: db.example.com
+# port: 5432
+# database: production
+```
+
+#### With Query Parameters
+
+```r
+"postgresql://user@host/db?sslmode=require&connect_timeout=30&application_name=MyApp"
+```
+
+### Keyword/Value Format
+
+#### Semicolon-Delimited (Legacy)
+
+```r
+"user=alice;password=secret;host=localhost;port=5432;dbname=mydb"
+```
+
+Useful when:
+- Migrating from older codebases
+- Pasting from legacy documentation
+- Compatibility with non-standard tools
+
+#### Whitespace-Delimited (libpq Standard)
+
+```r
+"host=localhost port=5432 user=alice dbname=mydb"
+```
+
+Matches official PostgreSQL `libpq` connection string format.
+
+#### With Quoted Values
+
+For values containing spaces:
+
+```r
+"host='my database host' user=alice dbname='my database' port=5432"
+```
+
+Both single and double quotes supported.
+
+---
+
+## SSL/TLS Configuration
+
+### sslmode Parameter
+
+Controls SSL/TLS connection behavior:
+
+| Value | Behavior | Use Case |
+|-------|----------|----------|
+| `disable` | No SSL | Local dev only |
+| `allow` | Try without SSL, fallback to SSL | Flexible dev |
+| `prefer` | Try SSL, fallback to non-SSL | Default for most |
+| `require` | Demand SSL, fail if unavailable | Production minimum |
+| `verify-ca` | Require SSL + verify certificate | High security |
+| `verify-full` | Require SSL + verify hostname | Maximum security |
+
+### Examples
+
+**Production - Require SSL**:
+```{r}
+Sys.setenv(RPG_CONN_STRING = "postgresql://user:pass@prod-db.com/db?sslmode=require")
+cn <- dbc()
+```
+
+**Maximum Security**:
+```{r}
+# Verify certificate and hostname
+conn_str <- "postgresql://user:pass@prod-db.com/db?sslmode=verify-full"
+Sys.setenv(RPG_CONN_STRING = conn_str)
+cn <- dbc()
+```
+
+**Local Development**:
+```{r}
+# Disable SSL for speed
+Sys.setenv(RPG_CONN_STRING = "postgresql://user:pass@localhost/dev?sslmode=disable")
+cn <- dbc()
+```
+
+---
+
+## IPv6 Hosts
+
+rpgconn properly handles IPv6 addresses using bracket notation:
+
+```{r}
+# IPv6 with port
+Sys.setenv(RPG_CONN_STRING = "postgresql://user:pass@[2001:db8::1]:5432/db")
+cn <- dbc()
+
+# IPv6 without explicit port (uses 5432 default)
+Sys.setenv(RPG_CONN_STRING = "postgresql://user:pass@[2001:db8::1]/db")
+cn <- dbc()
+```
+
+**Why brackets?** Colons in IPv6 addresses would be ambiguous with the `host:port` separator. Brackets disambiguate:
+
+```
+[2001:db8::1]:5432 → host=2001:db8::1, port=5432
+```
+
+---
+
+## URL-Encoded Credentials
+
+### When URL Encoding is Required
+
+Special characters in usernames/passwords must be URL-encoded:
+
+| Character | Encoded | Reason |
+|-----------|---------|--------|
+| `@` | `%40` | Separates auth from host |
+| `:` | `%3A` | Separates user from password |
+| `/` | `%2F` | Separates host from database |
+| `?` | `%3F` | Starts query parameters |
+| `&` | `%26` | Separates query parameters |
+| `=` | `%3D` | Separates param key from value |
+| ` ` (space) | `%20` | Whitespace not allowed in URIs |
+
+### Examples
+
+**Password contains @ symbol**:
+```{r}
+# Plain: p@ssword
+# Encoded: p%40ssword
+Sys.setenv(RPG_CONN_STRING = "postgresql://user:p%40ssword@host/db")
+cn <- dbc()
+```
+
+**Password contains : and @**:
+```{r}
+# Plain: my:p@ss
+# Encoded: my%3Ap%40ss
+Sys.setenv(RPG_CONN_STRING = "postgresql://user:my%3Ap%40ss@host/db")
+cn <- dbc()
+```
+
+**Database name with spaces or special chars**:
+```{r}
+# Plain database name: my-app-db
+# Encoded: my%2Dapp%2Ddb
+Sys.setenv(RPG_CONN_STRING = "postgresql://user@host/my%2Dapp%2Ddb")
+cn <- dbc()
+```
+
+### URL Encoding in R
+
+```{r}
+# Manual encoding
+password <- "my:p@ss:word"
+encoded <- utils::URLencode(password, reserved = TRUE)
+# "my%3Ap%40ss%3Aword"
+
+# Build connection string
+conn_str <- paste0("postgresql://user:", encoded, "@host/db")
+Sys.setenv(RPG_CONN_STRING = conn_str)
+```
+
+---
+
+## Custom Configuration Paths
+
+### Per-Project Configs
+
+Keep database configs in your project repository (without secrets):
+
+```yaml
+# config/db-dev.yml
+config:
+  dev:
+    host: localhost
+    port: 5432
+
+  test:
+    host: localhost
+    port: 5433
+```
+
+**Usage**:
+
+```{r}
+library(rpgconn)
+
+# Load project-specific config
+cn <- dbc(
+  cfg = "dev",
+  db = "myapp_dev",
+  cfg_path = "config/db-dev.yml"
+)
+```
+
+### Environment-Based Config Selection
+
+```{r}
+# Determine environment
+app_env <- Sys.getenv("APP_ENV", "dev")  # dev, staging, prod
+
+# Load environment-specific config
+cfg_file <- paste0("config/db-", app_env, ".yml")
+cn <- dbc(cfg = app_env, db = "myapp", cfg_path = cfg_file)
+```
+
+### Separating Secrets from Config
+
+**config/db-structure.yml** (safe to commit):
+```yaml
+config:
+  prod:
+    host: db.example.com
+    port: 25060
+```
+
+**~/.config/rpgconn/secrets.yml** (never commit):
+```yaml
+secrets:
+  prod:
+    user: app_user
+    password: super_secret
+```
+
+**Usage**:
+```{r}
+# Load both
+db_cfg <- yaml::read_yaml("config/db-structure.yml")$config$prod
+secrets <- yaml::read_yaml("~/.config/rpgconn/secrets.yml")$secrets$prod
+
+# Merge
+conn_args <- c(db_cfg, secrets, list(dbname = "myapp"))
+
+# Connect
+cn <- do.call(DBI::dbConnect, c(list(drv = RPostgres::Postgres()), conn_args))
+```
+
+---
+
+## Environment-Specific Configurations
+
+### Pattern 1: Single Config, Multiple Entries
+
+One config file, switch between entries:
+
+```{r}
+# Development
+cn <- dbc(cfg = "dev", db = "myapp")
+
+# Production
+cn <- dbc(cfg = "prod", db = "myapp")
+```
+
+### Pattern 2: Multiple Config Files
+
+Separate files per environment:
+
+```{r}
+app_env <- Sys.getenv("APP_ENV", "dev")
+
+cn <- dbc(
+  cfg = "default",
+  db = "myapp",
+  cfg_path = paste0("config/", app_env, ".yml")
+)
+```
+
+### Pattern 3: Environment Variable Override
+
+Use YAML for structure, environment variable for secrets:
+
+```r
+# config.yml (committed to git)
+config:
+  prod:
+    host: db.example.com
+    port: 5432
+```
+
+```{r}
+# In production environment
+Sys.setenv(RPG_CONN_STRING = "postgresql://user:$SECRET@db.example.com:5432/prod")
+cn <- dbc()
+```
+
+---
+
+## Multiple Databases
+
+### Sequential Connections
+
+```{r}
+library(rpgconn)
+
+# Connect to analytics DB
+cn_analytics <- dbc(cfg = "analytics", db = "warehouse")
+sales <- DBI::dbGetQuery(cn_analytics, "SELECT * FROM sales")
+dbd(cn_analytics)
+
+# Connect to application DB
+cn_app <- dbc(cfg = "app", db = "production")
+users <- DBI::dbGetQuery(cn_app, "SELECT * FROM users")
+dbd(cn_app)
+
+# Merge data
+combined <- merge(sales, users, by = "user_id")
+```
+
+### Concurrent Connections (Advanced)
+
+```{r}
+# Multiple connections at once
+cn_read <- dbc(cfg = "read_replica", db = "analytics")
+cn_write <- dbc(cfg = "primary", db = "analytics")
+
+# Read from replica (reduced load on primary)
+data <- DBI::dbGetQuery(cn_read, "SELECT * FROM large_table")
+
+# Write to primary only
+DBI::dbWriteTable(cn_write, "processed_data", result)
+
+# Cleanup
+dbd(cn_read)
+dbd(cn_write)
+```
+
+---
+
+## Troubleshooting
+
+### Error: "RPG_CONN_STRING not set"
+
+**Problem**: Environment variable not configured.
+
+**Solution**:
+```{r}
+# Check current value
+Sys.getenv("RPG_CONN_STRING")
+
+# Set it
+Sys.setenv(RPG_CONN_STRING = "postgresql://user:pass@host/db")
+
+# Or use YAML config instead
+init_yamls()
+edit_config()
+cn <- dbc(cfg = "local", db = "mydb")
+```
+
+### Error: "Connection string must include a '/{database}' segment"
+
+**Problem**: Missing database name in URI.
+
+**Wrong**:
+```r
+"postgresql://user@host"
+"postgresql://user@host:5432"
+```
+
+**Correct**:
+```r
+"postgresql://user@host/mydb"
+"postgresql://user@host:5432/mydb"
+```
+
+### Error: "Connection string must not contain whitespace"
+
+**Problem**: Copied connection string with line breaks or trailing spaces.
+
+**Wrong**:
+```r
+"postgresql://user@host
+/db"
+```
+
+**Correct**:
+```r
+# Remove whitespace
+conn_str <- gsub("\\s+", "", conn_str)
+Sys.setenv(RPG_CONN_STRING = conn_str)
+```
+
+### Error: "Port in connection string is not a valid integer"
+
+**Problem**: Port is not a number.
+
+**Wrong**:
+```r
+"postgresql://user@host:abc/db"
+```
+
+**Correct**:
+```r
+"postgresql://user@host:5432/db"
+```
+
+### Connection Timeout
+
+**Problem**: Database is unreachable or slow.
+
+**Solution**: Add timeout parameter:
+```{r}
+conn_str <- "postgresql://user@host/db?connect_timeout=30"
+Sys.setenv(RPG_CONN_STRING = conn_str)
+cn <- dbc()
+```
+
+### SSL/TLS Issues
+
+**Problem**: "SSL connection required" or certificate errors.
+
+**Solution**: Add sslmode parameter:
+```{r}
+# Require SSL
+conn_str <- "postgresql://user@host/db?sslmode=require"
+
+# Or disable for local dev
+conn_str <- "postgresql://user@localhost/db?sslmode=disable"
+
+Sys.setenv(RPG_CONN_STRING = conn_str)
+cn <- dbc()
+```
+
+---
+
+## Performance Tips
+
+### Connection Reuse
+
+**Don't** open/close connections in loops:
+
+```{r}
+# ❌ Slow - creates 100 connections
+for (i in 1:100) {
+  cn <- dbc()
+  result <- DBI::dbGetQuery(cn, "SELECT ...")
+  dbd(cn)
+}
+```
+
+**Do** reuse the connection:
+
+```{r}
+# ✅ Fast - creates 1 connection
+cn <- dbc()
+for (i in 1:100) {
+  result <- DBI::dbGetQuery(cn, "SELECT ...")
+}
+dbd(cn)
+```
+
+### Connection Pooling
+
+For Shiny apps or APIs with concurrent requests, use `pool`:
+
+```{r}
+library(pool)
+
+# Create connection pool
+pool <- dbPool(
+  drv = RPostgres::Postgres(),
+  host = "localhost",
+  port = 5432,
+  dbname = "mydb",
+  user = "myuser",
+  password = "mypass"
+)
+
+# Or use rpgconn args
+args <- dbc(args_only = TRUE)
+pool <- do.call(dbPool, args)
+
+# Use pool in Shiny
+output$data <- renderTable({
+  dbGetQuery(pool, "SELECT * FROM users")
+})
+
+# Cleanup when app stops
+onStop(function() {
+  poolClose(pool)
+})
+```
+
+---
+
+## Security Best Practices
+
+### Never Commit Secrets
+
+**❌ Bad** - Hardcoded in script:
+```{r}
+Sys.setenv(RPG_CONN_STRING = "postgresql://user:actual_password@host/db")
+```
+
+**✅ Good** - Use `.Renviron`:
+```bash
+# .Renviron (add to .gitignore!)
+RPG_CONN_STRING=postgresql://user:actual_password@host/db
+```
+
+### Separate Dev and Prod Configs
+
+```yaml
+# config-dev.yml (can commit)
+config:
+  dev:
+    host: localhost
+    port: 5432
+
+# config-prod.yml (NEVER commit)
+config:
+  prod:
+    host: prod-db.example.com
+    port: 25060
+    user: prod_user
+    password: actual_secret
+```
+
+### Use Read-Only Credentials for Analytics
+
+```{r}
+# Read-only user for reporting/analytics
+Sys.setenv(RPG_CONN_STRING = "postgresql://readonly_user:pass@host/db")
+cn <- dbc()
+
+# Writes will fail (database permission denied)
+# This prevents accidental data modification in analysis scripts
+```
+
+### Environment Variable Precedence
+
+Load secrets from most secure source available:
+
+```{r}
+# Priority order:
+# 1. System environment (most secure - set by ops/infra)
+conn_str <- Sys.getenv("RPG_CONN_STRING", unset = NA)
+
+# 2. .Renviron (personal, not committed)
+if (is.na(conn_str)) {
+  # .Renviron loaded automatically by R
+  conn_str <- Sys.getenv("RPG_CONN_STRING")
+}
+
+# 3. Fallback to YAML config (least secure - only for dev)
+if (conn_str == "") {
+  cn <- dbc(cfg = "dev", db = "myapp")
+}
+```
+
+---
+
+## Advanced Query Parameters
+
+### Runtime Configuration
+
+Pass PostgreSQL configuration via `options` parameter:
+
+```{r}
+# Set search path
+conn_str <- "postgresql://user@host/db?options=-c%20search_path%3Dmyschema"
+Sys.setenv(RPG_CONN_STRING = conn_str)
+cn <- dbc()
+
+# Equivalent to running:
+# SET search_path = myschema
+```
+
+### Application Name
+
+Helps identify connections in `pg_stat_activity`:
+
+```{r}
+conn_str <- "postgresql://user@host/db?application_name=MyShinyApp"
+Sys.setenv(RPG_CONN_STRING = conn_str)
+cn <- dbc()
+
+# On database server:
+# SELECT application_name, query FROM pg_stat_activity;
+# Will show "MyShinyApp" for this connection
+```
+
+### Statement Timeout
+
+Prevent runaway queries:
+
+```{r}
+# Timeout queries after 60 seconds
+conn_str <- "postgresql://user@host/db?options=-c%20statement_timeout%3D60000"
+Sys.setenv(RPG_CONN_STRING = conn_str)
+cn <- dbc()
+```
+
+---
+
+## Testing Strategies
+
+### Pattern 1: Test-Specific Environment
+
+```{r}
+test_that("database operations work", {
+  # Isolate test environment
+  withr::local_envvar(
+    RPG_CONN_STRING = "postgresql://test:test@localhost:5432/testdb"
+  )
+
+  cn <- dbc()
+
+  # Test code here...
+
+  dbd(cn)
+})
+```
+
+### Pattern 2: Shared Test Fixtures
+
+**tests/testthat/setup.R**:
+```{r}
+# Setup test database connection
+setup_test_db <- function() {
+  Sys.setenv(RPG_CONN_STRING = "postgresql://test:test@localhost/testdb")
+  cn <- dbc()
+
+  # Create test schema
+  DBI::dbExecute(cn, "CREATE SCHEMA IF NOT EXISTS test")
+  DBI::dbExecute(cn, "SET search_path TO test")
+
+  cn
+}
+
+teardown_test_db <- function(cn) {
+  DBI::dbExecute(cn, "DROP SCHEMA IF EXISTS test CASCADE")
+  dbd(cn)
+}
+```
+
+**tests/testthat/test-myfeature.R**:
+```{r}
+test_that("feature works with database", {
+  cn <- setup_test_db()
+  on.exit(teardown_test_db(cn))
+
+  # Test code...
+})
+```
+
+### Pattern 3: Mock Connections
+
+For unit tests that don't need real database:
+
+```{r}
+test_that("connection args are parsed correctly", {
+  Sys.setenv(RPG_CONN_STRING = "postgresql://user:pass@host:5432/db")
+
+  # Get args without connecting
+  args <- dbc(args_only = TRUE)
+
+  expect_equal(args$host, "host")
+  expect_equal(args$port, "5432")
+  expect_equal(args$user, "user")
+  # ... no actual database required
+})
+```
+
+---
+
+## CI/CD Integration
+
+### GitHub Actions
+
+**.github/workflows/test.yml**:
+```yaml
+name: Tests
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: testdb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: r-lib/actions/setup-r@v2
+
+      - name: Install dependencies
+        run: |
+          install.packages(c("devtools", "testthat"))
+          devtools::install_deps()
+        shell: Rscript {0}
+
+      - name: Run tests
+        env:
+          RPG_CONN_STRING: "postgresql://postgres:postgres@localhost:5432/testdb"
+        run: devtools::test()
+        shell: Rscript {0}
+```
+
+### Docker Compose
+
+**docker-compose.yml**:
+```yaml
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: myapp
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: myapp_dev
+    ports:
+      - "5432:5432"
+
+  app:
+    image: rocker/r-ver:4.3
+    environment:
+      RPG_CONN_STRING: "postgresql://myapp:secret@db:5432/myapp_dev"
+    depends_on:
+      - db
+    volumes:
+      - .:/workspace
+```
+
+---
+
+## Package Development Using rpgconn
+
+### In Your Package
+
+**DESCRIPTION**:
+```
+Imports: rpgconn, DBI
+Suggests: testthat, withr
+```
+
+**R/db.R**:
+```{r}
+#' Get Database Connection
+#'
+#' Internal function to get database connection for this package.
+#' Uses rpgconn to avoid boilerplate.
+#'
+#' @keywords internal
+get_db <- function() {
+  rpgconn::dbc()
+}
+
+#' Query Users Table
+#'
+#' @export
+get_active_users <- function() {
+  cn <- get_db()
+  on.exit(rpgconn::dbd(cn))
+
+  DBI::dbGetQuery(cn, "SELECT * FROM users WHERE active = TRUE")
+}
+```
+
+### In Package Tests
+
+**tests/testthat/helper.R**:
+```{r}
+# Skip tests if database not available
+skip_if_no_db <- function() {
+  if (Sys.getenv("RPG_CONN_STRING") == "") {
+    skip("RPG_CONN_STRING not set")
+  }
+
+  tryCatch(
+    {
+      cn <- rpgconn::dbc()
+      rpgconn::dbd(cn)
+    },
+    error = function(e) {
+      skip(paste("Database not available:", e$message))
+    }
+  )
+}
+```
+
+**tests/testthat/test-db-functions.R**:
+```{r}
+test_that("get_active_users returns data.frame", {
+  skip_if_no_db()
+
+  result <- get_active_users()
+
+  expect_s3_class(result, "data.frame")
+  expect_true("active" %in% names(result))
+})
+```
+
+---
+
+## Learn More
+
+- **Package Overview**: `vignette("rpgconn")`
+- **Quick Start**: `vignette("quick-start")`
+- **Function Reference**: `?dbc`, `?use_config`
+- **PostgreSQL Docs**: [Connection Strings](https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNSTRING)

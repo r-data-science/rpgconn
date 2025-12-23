@@ -1,0 +1,61 @@
+url: https://r-data-science.github.io/rpgconn
+
+template:
+  bootstrap: 5
+  bootswatch: flatly
+  bslib:
+    primary: "#0054AD"
+    base_font: {google: "Roboto"}
+    heading_font: {google: "Roboto Slab"}
+    code_font: {google: "JetBrains Mono"}
+
+navbar:
+  structure:
+    left:  [intro, reference, articles, news]
+    right: [search, github]
+  components:
+    articles:
+      text: Articles
+      menu:
+      - text: Package Overview
+        href: articles/rpgconn.html
+      - text: -------
+      - text: Quick Start Guide
+        href: articles/quick-start.html
+      - text: Advanced Usage
+        href: articles/advanced-usage.html
+
+reference:
+  - title: Database Connection
+    desc: Core functions for connecting to and disconnecting from PostgreSQL databases
+    contents:
+      - has_concept("database-connection")
+      - has_concept("postgresql")
+
+  - title: Configuration Management
+    desc: Manage connection configurations and options
+    contents:
+      - has_concept("configuration")
+      - has_concept("config-management")
+
+articles:
+  - title: Getting Started
+    navbar: ~
+    contents:
+      - rpgconn
+      - quick-start
+
+  - title: Advanced
+    navbar: ~
+    contents:
+      - advanced-usage
+
+development:
+  mode: auto
+
+home:
+  title: "rpgconn • User-Friendly PostgreSQL Connection Management"
+  description: >
+    Simplified PostgreSQL database connections for R. Supports standard URI
+    connection strings, YAML configurations, and environment variables.
+    Fail-fast validation with clear error messages.

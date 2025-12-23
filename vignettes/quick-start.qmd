@@ -1,0 +1,421 @@
+---
+title: "Quick Start Guide"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Quick Start Guide}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE
+)
+```
+
+## Installation
+
+```{r}
+# From CRAN
+install.packages("rpgconn")
+
+# From GitHub (development version)
+# install.packages("pak")
+pak::pkg_install("r-data-science/rpgconn")
+```
+
+## Choose Your Setup Path
+
+Pick the setup that matches your environment:
+
+- **Path A**: Cloud database (DigitalOcean, AWS RDS, Heroku) → [Jump to Cloud Setup](#cloud-database-setup)
+- **Path B**: Local PostgreSQL → [Jump to Local Setup](#local-database-setup)
+- **Path C**: Team/shared configuration → [Jump to YAML Setup](#yaml-configuration-setup)
+
+---
+
+## Cloud Database Setup
+
+### Step 1: Get Your Connection String
+
+Most cloud providers give you a connection string. Examples:
+
+**DigitalOcean Managed Database**:
+```
+postgresql://doadmin:password@db-postgresql-nyc3-12345.ondigitalocean.com:25060/defaultdb?sslmode=require
+```
+
+**AWS RDS**:
+```
+postgresql://dbuser:password@mydb.abc123.us-east-1.rds.amazonaws.com:5432/production
+```
+
+**Heroku Postgres**:
+```
+postgres://user:pass@ec2-1-2-3-4.compute-1.amazonaws.com:5432/dbname
+```
+
+### Step 2: Set Environment Variable
+
+**In R session**:
+```{r}
+Sys.setenv(RPG_CONN_STRING = "postgresql://user:pass@host:5432/db?sslmode=require")
+```
+
+**In `.Renviron`** (persistent across sessions):
+```bash
+# Open .Renviron file
+usethis::edit_r_environ()
+
+# Add this line:
+RPG_CONN_STRING=postgresql://user:pass@host:5432/db?sslmode=require
+
+# Save, close, restart R
+```
+
+**In system environment** (best for production):
+```bash
+# Linux/Mac (~/.bashrc or ~/.zshrc)
+export RPG_CONN_STRING="postgresql://user:pass@host/db"
+
+# Windows (PowerShell as Administrator)
+[Environment]::SetEnvironmentVariable("RPG_CONN_STRING", "postgresql://...", "User")
+```
+
+### Step 3: Connect
+
+```{r}
+library(rpgconn)
+
+# Connect using environment variable
+cn <- dbc()
+
+# Verify connection
+DBI::dbGetQuery(cn, "SELECT version()")
+
+# Disconnect when done
+dbd(cn)
+```
+
+✅ **Done!** Your cloud database is ready to use.
+
+---
+
+## Local Database Setup
+
+### Prerequisites
+
+Install PostgreSQL:
+
+- **Mac**: `brew install postgresql@15` then `brew services start postgresql@15`
+- **Ubuntu**: `sudo apt-get install postgresql postgresql-contrib`
+- **Windows**: Download from [postgresql.org](https://www.postgresql.org/download/windows/)
+
+### Step 1: Create Database and User
+
+```bash
+# Connect to PostgreSQL as superuser
+psql postgres
+
+# Create database and user
+CREATE DATABASE myapp_dev;
+CREATE USER myapp_user WITH PASSWORD 'dev_password';
+GRANT ALL PRIVILEGES ON DATABASE myapp_dev TO myapp_user;
+
+# Exit
+\q
+```
+
+### Step 2: Build Connection String
+
+```{r}
+# Format: postgresql://user:password@host:port/database
+conn_str <- "postgresql://myapp_user:dev_password@localhost:5432/myapp_dev"
+
+# Set environment variable
+Sys.setenv(RPG_CONN_STRING = conn_str)
+```
+
+### Step 3: Connect and Test
+
+```{r}
+library(rpgconn)
+
+cn <- dbc()
+
+# Create a test table
+DBI::dbExecute(cn, "
+  CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW()
+  )
+")
+
+# Insert test data
+DBI::dbExecute(cn, "INSERT INTO users (name) VALUES ('Alice'), ('Bob')")
+
+# Query
+DBI::dbGetQuery(cn, "SELECT * FROM users")
+
+# Cleanup
+dbd(cn)
+```
+
+✅ **Done!** Local development environment ready.
+
+---
+
+## YAML Configuration Setup
+
+Best for teams or when managing multiple databases.
+
+### Step 1: Initialize Config Files
+
+```{r}
+library(rpgconn)
+
+init_yamls()
+# Output: rpgconn: configs created
+#   ...Update connection configs: edit_config()
+#   ...Update connection options: edit_options()
+```
+
+### Step 2: Edit Configuration
+
+```{r}
+edit_config()
+```
+
+This opens `~/.config/rpgconn/config.yml` in your editor:
+
+```yaml
+config:
+  local:
+    host: localhost
+    port: 5432
+  prod:
+    host: example_prod_host
+    port: 5432
+    user: "some user"
+    password: "some password"
+```
+
+**Update it**:
+
+```yaml
+config:
+  dev:
+    host: localhost
+    port: 5432
+    user: myapp_user
+    password: dev_password
+
+  staging:
+    host: staging-db.example.com
+    port: 5432
+    user: app_staging
+    password: staging_secret
+
+  prod:
+    host: prod-db.example.com
+    port: 25060
+    user: app_prod
+    password: prod_secret
+```
+
+### Step 3: Connect Using Named Config
+
+```{r}
+# Development database
+cn_dev <- dbc(cfg = "dev", db = "myapp_dev")
+dbd(cn_dev)
+
+# Staging database
+cn_staging <- dbc(cfg = "staging", db = "myapp_staging")
+dbd(cn_staging)
+
+# Production database (be careful!)
+cn_prod <- dbc(cfg = "prod", db = "myapp_prod")
+dbd(cn_prod)
+```
+
+### Step 4: Optional - Customize Connection Options
+
+```{r}
+edit_options()
+```
+
+Opens `~/.config/rpgconn/options.yml`:
+
+```yaml
+options:
+  connect_timeout: 10
+  timezone: UTC
+  application_name: rpgconn
+  client_encoding: UTF8
+```
+
+These options are applied to **all** connections automatically.
+
+---
+
+## Common Workflows
+
+### Workflow 1: Quick Query
+
+```{r}
+library(rpgconn)
+
+# One-liner connection
+cn <- dbc()
+
+# Run query
+result <- DBI::dbGetQuery(cn, "SELECT * FROM users WHERE active = TRUE")
+
+# Don't forget to disconnect
+dbd(cn)
+
+# Or use withr for automatic cleanup
+withr::with_db_connection(
+  cn <- dbc(),
+  {
+    DBI::dbGetQuery(cn, "SELECT count(*) FROM orders")
+  }
+)
+```
+
+### Workflow 2: Long-Running Script
+
+```{r}
+library(rpgconn)
+
+# Connect once at the start
+cn <- dbc()
+
+# Do lots of work
+orders <- DBI::dbReadTable(cn, "orders")
+customers <- DBI::dbReadTable(cn, "customers")
+
+# ... process data ...
+
+# Write results back
+DBI::dbWriteTable(cn, "daily_summary", summary_df, overwrite = TRUE)
+
+# Disconnect at the end
+dbd(cn)
+```
+
+### Workflow 3: Shiny App
+
+```{r}
+library(shiny)
+library(rpgconn)
+
+ui <- fluidPage(
+  tableOutput("data")
+)
+
+server <- function(input, output, session) {
+  # Connect once when app starts
+  cn <- dbc()
+
+  # Ensure cleanup when app closes
+  onStop(function() {
+    dbd(cn)
+  })
+
+  output$data <- renderTable({
+    # Query database on demand
+    DBI::dbGetQuery(cn, "SELECT * FROM products LIMIT 10")
+  })
+}
+
+shinyApp(ui, server)
+```
+
+### Workflow 4: Testing with Fixtures
+
+```{r}
+test_that("database operations work", {
+  # Use test-specific config
+  withr::local_envvar(
+    RPG_CONN_STRING = "postgresql://test:test@localhost:5432/testdb"
+  )
+
+  cn <- dbc()
+
+  # Setup
+  DBI::dbExecute(cn, "CREATE TABLE test_users (id INT, name TEXT)")
+  DBI::dbExecute(cn, "INSERT INTO test_users VALUES (1, 'Alice')")
+
+  # Test
+  result <- DBI::dbGetQuery(cn, "SELECT * FROM test_users")
+  expect_equal(nrow(result), 1)
+
+  # Cleanup
+  DBI::dbExecute(cn, "DROP TABLE test_users")
+  dbd(cn)
+})
+```
+
+---
+
+## Debugging Connection Issues
+
+### Check Connection String is Set
+
+```{r}
+Sys.getenv("RPG_CONN_STRING")
+# Should print your connection string
+# If empty, it's not set
+```
+
+### Preview Connection Arguments Without Connecting
+
+```{r}
+args <- dbc(args_only = TRUE)
+str(args)
+
+# Verify:
+# - host is correct
+# - port is correct
+# - user/password are not NA
+# - dbname is correct
+```
+
+### Test Raw DBI Connection
+
+```{r}
+# If rpgconn works but connection fails, test with raw DBI
+library(DBI)
+library(RPostgres)
+
+cn <- dbConnect(
+  Postgres(),
+  host = "localhost",
+  port = 5432,
+  dbname = "mydb",
+  user = "myuser",
+  password = "mypassword"
+)
+```
+
+---
+
+## Next Steps
+
+- **Package Overview**: See `vignette("rpgconn")` for design philosophy
+- **Advanced Usage**: See `vignette("advanced-usage")` for:
+  - SSL configuration
+  - IPv6 hosts
+  - Custom configs per project
+  - Troubleshooting guide
+
+## Need Help?
+
+- **Documentation**: `?dbc`, `?use_config`
+- **Issues**: [GitHub Issues](https://github.com/r-data-science/rpgconn/issues)
+- **Examples**: `example(dbc)`

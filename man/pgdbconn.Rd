@@ -8,7 +8,7 @@
 \alias{dir_rpg}
 \alias{edit_config}
 \alias{edit_options}
-\title{Database Connect/Disconnect}
+\title{PostgreSQL Database Connection Management}
 \usage{
 dbc(cfg = NULL, db = NULL, args_only = FALSE, cfg_path = NULL, opt_path = NULL)
 
@@ -23,23 +23,89 @@ edit_config()
 edit_options()
 }
 \arguments{
-\item{cfg}{a connection config name used when loading connection args from internally stored yaml}
+\item{cfg}{A connection configuration name used when loading connection arguments
+from internally stored YAML files. If `NULL` (the default), connection
+arguments are read from the environment variable `RPG_CONN_STRING`.}
 
-\item{db}{Database name. Default of NULL will utilize the dbname in the connection string}
+\item{db}{Database name. If `NULL`, the `dbname` value from the connection string
+or configuration is used. Required when using `cfg` parameter.}
 
-\item{args_only}{If TRUE, only return the connection arguments (Default FALSE will make the connection)}
+\item{args_only}{Logical. If `TRUE`, return only the connection arguments without
+establishing a connection. If `FALSE` (default), establish and return the connection.}
 
-\item{cfg_path}{optional path to override default db config file.}
+\item{cfg_path}{Optional path to override default database config file location.
+Useful for testing or project-specific configurations.}
 
-\item{opt_path}{optional path to override default db options file.}
+\item{opt_path}{Optional path to override default database options file location.}
 
-\item{cn}{a database connection object}
+\item{cn}{A database connection object to disconnect.}
 }
 \value{
-\code{dbc} returns a database connection object or a list of connection arguments while \code{dbd} returns nothing
+- `dbc()`: A database connection object (class `PqConnection`) when `args_only = FALSE`,
+  or a named list of connection arguments when `args_only = TRUE`.
+- `dbd()`: `NULL`, invisibly. Called for side effect of closing connection.
+- `init_yamls()`: Path to rpgconn config directory, invisibly.
+- `dir_rpg()`: Character string path to rpgconn config directory.
+- `edit_config()`: Path to config file, invisibly.
+- `edit_options()`: Path to options file, invisibly.
 }
 \description{
-Database Connect/Disconnect
+Simplified interface for connecting to PostgreSQL databases using either
+environment variables, URI connection strings, or YAML configuration files.
+}
+\details{
+## Why rpgconn?
+
+Managing PostgreSQL connections across environments (local, staging, production)
+is error-prone and insecure. rpgconn eliminates this friction by:
+
+- **Portable**: Uses standard PostgreSQL URI format that works across languages and tools
+- **Secure**: Stores configurations locally in user directories, never in version control
+- **Flexible**: Supports URI format, keyword/value format, and YAML configs
+- **Fail-fast**: Validates connection strings upfront with clear error messages
+- **Zero friction**: Single function call replaces repetitive `DBI::dbConnect()` boilerplate
+
+## Connection Methods
+
+### Method 1: Environment Variable (Recommended for Cloud)
+
+Set `RPG_CONN_STRING` to a PostgreSQL URI:
+
+```r
+Sys.setenv(RPG_CONN_STRING = "postgresql://user:pass@host:5432/db")
+cn <- dbc()
+```
+
+Supports query parameters for SSL and other options:
+
+```r
+Sys.setenv(RPG_CONN_STRING = "postgresql://user:pass@host/db?sslmode=require")
+```
+
+### Method 2: YAML Configuration (Recommended for Teams)
+
+Initialize and edit config files:
+
+```r
+init_yamls()
+edit_config()  # Opens ~/.config/rpgconn/config.yml
+```
+
+Then connect using named configurations:
+
+```r
+cn <- dbc(cfg = "local", db = "mydb")
+```
+
+## Connection String Formats
+
+The package supports multiple PostgreSQL connection string formats:
+
+- **URI**: `postgresql://user:pass@host:5432/db?sslmode=require`
+- **Keyword/value (semicolon)**: `user=...;password=...;host=...;port=...;dbname=...`
+- **Keyword/value (whitespace)**: `host=... user=... dbname=... port=...`
+
+See `vignette("advanced-usage")` for comprehensive format documentation.
 }
 \section{Functions}{
 \itemize{
@@ -57,6 +123,39 @@ Database Connect/Disconnect
 
 }}
 \examples{
-# cn <- dbc("mydb") # Connect
-# dbd(cn)           # Disconnect
+\dontrun{
+# Method 1: Using connection string (cloud databases)
+Sys.setenv(RPG_CONN_STRING = "postgresql://user:pass@localhost:5432/mydb")
+cn <- dbc()
+DBI::dbGetQuery(cn, "SELECT version()")
+dbd(cn)
+
+# Method 2: Using YAML config (team/local setups)
+init_yamls()
+edit_config()  # Edit ~/.config/rpgconn/config.yml
+cn <- dbc(cfg = "local", db = "mydb")
+dbd(cn)
+
+# Get connection args without connecting (useful for debugging)
+args <- dbc(args_only = TRUE)
+str(args)
+
+# Use custom config file (testing, project-specific)
+cn <- dbc(cfg = "test", db = "testdb", cfg_path = "tests/fixtures/config.yml")
+dbd(cn)
 }
+}
+\seealso{
+- [RPostgres::Postgres()] for the underlying PostgreSQL driver
+- [DBI::dbConnect()] for lower-level connection details
+- [use_config()] for adopting external configuration files
+
+Other configuration: 
+\code{\link{use_config}()}
+}
+\concept{configuration}
+\concept{database-config}
+\concept{database-connection}
+\concept{postgresql}
+\keyword{connection}
+\keyword{database}

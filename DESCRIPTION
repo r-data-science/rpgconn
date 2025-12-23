@@ -1,20 +1,23 @@
 Package: rpgconn
 Type: Package
 Title: User-Friendly PostgreSQL Connection Management
-Version: 0.3.3
-Authors@R: 
+Version: 0.4.0
+Authors@R:
     person(given = "Bobby",
            family = "Fatemi",
            role = c("aut", "cre"),
            email = "bfatemi07@gmail.com")
 Maintainer: Bobby Fatemi <bfatemi07@gmail.com>
 Description: Provides a user-friendly interface for managing PostgreSQL
-    database connection settings.  The package supplies helper functions to
-    create, edit and load connection and option configuration files stored in a
-    user-specific directory using the 'odbc' and 'RPostgres' back ends.  These
-    helpers make it easy to construct a reproducible connection string from a
+    database connection settings. Supports standard PostgreSQL URI connection
+    strings (postgresql://user:pass@host:port/db) with query parameters, IPv6
+    hosts, and URL-encoded credentials. The package supplies helper functions
+    to create, edit and load connection and option configuration files stored
+    in a user-specific directory using the 'RPostgres' back end. These helpers
+    make it easy to construct a reproducible connection string from a
     configuration file, either by reading user-defined YAML files or by parsing
-    an environment variable.
+    an environment variable. Validation-first architecture provides clear,
+    actionable error messages instead of cryptic connection failures.
 Encoding: UTF-8
 LazyData: true
 License: MIT + file LICENSE
@@ -30,8 +33,15 @@ Imports:
     stringr,
     usethis,
     yaml
-Suggests: 
+Suggests:
+    knitr,
+    pak,
+    pool,
+    quarto,
     rstudioapi,
+    shiny,
     spelling,
-    testthat (>= 3.0.0)
+    testthat (>= 3.0.0),
+    withr
 Config/testthat/edition: 3
+VignetteBuilder: quarto
