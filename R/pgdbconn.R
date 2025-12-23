@@ -1,9 +1,16 @@
-#' Database Connect/Disconnect
+#' Connect to a PostgreSQL database or return connection arguments
 #'
-#' @param db Database name. Default of NULL will utilize the dbname in the connection string
-#' @param args_only If TRUE, only return the connection arguments (Default FALSE will make the connection)
-#' @param cn a database connection object
-#' @param cfg a connection config name used when loading connection args from internally stored yaml
+#' Create a connection to a PostgreSQL database using configuration settings loaded
+#' from environment variables or YAML files. When `args_only` is `TRUE`, the function
+#' returns a list of connection arguments instead of establishing the connection.
+#'
+#' @param cfg A connection configuration name used when loading connection arguments
+#'   from internally stored YAML files. If `NULL` (the default), connection
+#'   arguments are read from the environment variable `RPG_CONN_STRING`.
+#' @param db Database name. If `NULL`, the `dbname` value from the connection string
+#'   is used.
+#' @param args_only Logical. If `TRUE`, return only the connection arguments. If
+#'   `FALSE` (default), make the connection and return the resulting connection object.
 #' @param cfg_path optional path to override default db config file.
 #' @param opt_path optional path to override default db options file.
 #'
@@ -14,17 +21,23 @@
 #' @importFrom fs path_package dir_create path file_exists file_copy
 #' @importFrom yaml yaml.load_file
 #'
-#' @return \code{dbc} returns a database connection object or a list of connection arguments while \code{dbd} returns nothing
+#' @return If `args_only = FALSE`, a database connection object created by
+#'   `DBI::dbConnect()`. If `args_only = TRUE`, a named list of connection arguments.
 #'
 #' @examples
-#' # cn <- dbc("mydb") # Connect
-#' # dbd(cn)           # Disconnect
-#' @name pgdbconn
-NULL
-
-#' @describeIn pgdbconn Connect to a database or return the connection arguments
+#' # Connect to a database using a configuration stored in ~/.config/rpgconn/config.yml:
+#' # cn <- dbc(cfg = "local", db = "mydb")
+#' # Disconnect from the database:
+#' # dbd(cn)
 #' @export
-dbc <- function(cfg = NULL, db = NULL, args_only = FALSE, cfg_path = NULL, opt_path = NULL) {
+
+dbc <- function(
+  cfg = NULL,
+  db = NULL,
+  args_only = FALSE,
+  cfg_path = NULL,
+  opt_path = NULL
+) {
   # if cfg is null, use envvar
   if (is.null(cfg)) {
     message("\n[---- Checking RPG_CONN_STRING ----]")
@@ -95,7 +108,12 @@ dbc <- function(cfg = NULL, db = NULL, args_only = FALSE, cfg_path = NULL, opt_p
   do.call(DBI::dbConnect, c_args)
 }
 
-#' @describeIn pgdbconn Disconnect from a database
+#' Disconnect from a PostgreSQL database
+#'
+#' Close a database connection created by `dbc()`.
+#'
+#' @param cn A database connection object created by `dbc()`.
+#' @return Invisibly returns `NULL`.
 #' @export
 dbd <- function(cn) {
   message("\n|------- Closing Connection -------|")
@@ -103,7 +121,13 @@ dbd <- function(cn) {
 }
 
 
-#' @describeIn pgdbconn Initialize connection files
+#' Initialize configuration files
+#'
+#' Ensures that the default connection (`config.yml`) and options (`options.yml`) templates
+#' exist in the user-specific configuration directory. If they do not exist, they are copied
+#' from the package's `extdata` directory. Use `edit_config()` and `edit_options()` to modify them.
+#'
+#' @return Invisibly returns the path to the configuration directory.
 #' @export
 init_yamls <- function() {
   dir_rpg <- fs::dir_create(dir_rpg())
@@ -122,7 +146,11 @@ init_yamls <- function() {
 }
 
 
-#' @describeIn pgdbconn get the path to the rpg settings directory
+#' Get the path to the rpgconn configuration directory
+#'
+#' Returns the directory path used by rpgconn for storing configuration files.
+#'
+#' @return A character string giving the path to the configuration directory.
 #' @export
 dir_rpg <- function() {
   # Use a user-specific configuration directory compliant with CRAN policies
@@ -131,7 +159,13 @@ dir_rpg <- function() {
   tools::R_user_dir("rpgconn", which = "config")
 }
 
-#' @describeIn pgdbconn edit the internally configured connection parameters
+#' Edit the connection configuration file
+#'
+#' In an interactive session, opens the YAML configuration file for editing using the user's
+#' preferred editor. In non-interactive contexts (e.g. during automated checks), the file
+#' path is returned invisibly without opening the editor.
+#'
+#' @return Invisibly returns the path to the configuration file.
 #' @export
 edit_config <- function() {
   f <- xpath_config()
@@ -139,12 +173,20 @@ edit_config <- function() {
     # Only launch the editor in interactive sessions (e.g. at the console).
     usethis::edit_file(f)
   } else {
-    message("edit_config() called in non-interactive mode; returning file path without opening an editor.")
+    message(
+      "edit_config() called in non-interactive mode; returning file path without opening an editor."
+    )
   }
   invisible(f)
 }
 
-#' @describeIn pgdbconn edit the internally configured connection options
+#' Edit the options configuration file
+#'
+#' In an interactive session, opens the YAML options file for editing using the user's
+#' preferred editor. In non-interactive contexts, the file path is returned invisibly
+#' without opening the editor.
+#'
+#' @return Invisibly returns the path to the options file.
 #' @export
 edit_options <- function() {
   f <- xpath_options()
@@ -152,12 +194,14 @@ edit_options <- function() {
     # Only launch the editor in interactive sessions (e.g. at the console).
     usethis::edit_file(f)
   } else {
-    message("edit_options() called in non-interactive mode; returning file path without opening an editor.")
+    message(
+      "edit_options() called in non-interactive mode; returning file path without opening an editor."
+    )
   }
   invisible(f)
 }
 
-#' @describeIn pgdbconn internal function to read conn args from yaml
+#' Internal function to read connection arguments from yaml
 #' @noRd
 load_c_args <- function(cfg_path = NULL) {
   if (is.null(cfg_path)) {
@@ -169,7 +213,7 @@ load_c_args <- function(cfg_path = NULL) {
   yaml::yaml.load_file(cfg_path, eval.expr = TRUE)$config
 }
 
-#' @describeIn pgdbconn internal function to read conn options from yaml
+#' Internal function to read connection options from yaml
 #' @noRd
 load_c_opts <- function(opt_path = NULL) {
   if (is.null(opt_path)) {
@@ -181,26 +225,26 @@ load_c_opts <- function(opt_path = NULL) {
   yaml::yaml.load_file(opt_path)$options
 }
 
-#' @describeIn pgdbconn internal function to get path of config file
+#' Internal function to get path of config file
 #' @noRd
 xpath_config <- function() {
   fs::path(dir_rpg(), "config.yml")
 }
 
-#' @describeIn pgdbconn internal function to get path of options file
+#' Internal function to get path of options file
 #' @noRd
 xpath_options <- function() {
   fs::path(dir_rpg(), "options.yml")
 }
 
 
-#' @describeIn pgdbconn internal function to get path of config file template
+#' Internal function to get path of config file template
 #' @noRd
 xpath_config_templ <- function() {
   fs::path_package("rpgconn", "extdata", "config.yml")
 }
 
-#' @describeIn pgdbconn internal function to get path of options file template
+#' Internal function to get path of options file template
 #' @noRd
 xpath_options_templ <- function() {
   fs::path_package("rpgconn", "extdata", "options.yml")
