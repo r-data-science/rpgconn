@@ -1,19 +1,13 @@
 ---
-title: "Advanced Usage Guide"
-output: rmarkdown::html_vignette
+title: "Advanced Workflow"
+format: html
+execute:
+  eval: false
 vignette: >
-  %\VignetteIndexEntry{Advanced Usage Guide}
+  %\VignetteIndexEntry{Advanced Workflow}
   %\VignetteEngine{quarto::html}
   %\VignetteEncoding{UTF-8}
 ---
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(
-  collapse = TRUE,
-  comment = "#>",
-  eval = FALSE
-)
-```
 
 ## Connection String Formats Reference
 
@@ -848,6 +842,6 @@ test_that("get_active_users returns data.frame", {
 ## Learn More
 
 - **Package Overview**: `vignette("rpgconn")`
-- **Quick Start**: `vignette("quick-start")`
+- **Quick Start**: `vignette("quickstart")`
 - **Function Reference**: `?dbc`, `?use_config`
 - **PostgreSQL Docs**: [Connection Strings](https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNSTRING)

@@ -171,8 +171,8 @@ dbd(cn)
 ## Learn More
 
 - 📘 **[Package Overview](https://r-data-science.github.io/rpgconn/articles/rpgconn.html)** - Design philosophy and architecture
-- 🚀 **[Quick Start Guide](https://r-data-science.github.io/rpgconn/articles/quick-start.html)** - Get connected in 5 minutes
-- 🔧 **[Advanced Usage](https://r-data-science.github.io/rpgconn/articles/advanced-usage.html)** - SSL, IPv6, troubleshooting, and more
+- 🚀 **[Quickstart Guide](https://r-data-science.github.io/rpgconn/articles/quickstart.html)** - Get connected in 5 minutes
+- 🔧 **[Advanced Workflow](https://r-data-science.github.io/rpgconn/articles/advanced-workflow.html)** - SSL, IPv6, troubleshooting, and more
 - 📖 **[Function Reference](https://r-data-science.github.io/rpgconn/reference/index.html)** - Complete API documentation
 
 ## Getting Help

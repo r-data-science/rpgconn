@@ -74,7 +74,7 @@ config:
     password: secret
 ```
 
-See `vignette("quick-start")` for complete examples.
+See `vignette("quickstart")` for complete examples.
 }
 \examples{
 \dontrun{

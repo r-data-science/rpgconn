@@ -1,19 +1,13 @@
 ---
-title: "rpgconn: PostgreSQL Connection Management"
-output: rmarkdown::html_vignette
+title: "Get started with rpgconn"
+format: html
+execute:
+  eval: false
 vignette: >
-  %\VignetteIndexEntry{rpgconn: PostgreSQL Connection Management}
+  %\VignetteIndexEntry{Get started with rpgconn}
   %\VignetteEngine{quarto::html}
   %\VignetteEncoding{UTF-8}
 ---
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(
-  collapse = TRUE,
-  comment = "#>",
-  eval = FALSE
-)
-```
 
 ## The Problem
 
@@ -228,8 +222,8 @@ rpgconn is a convenience wrapper, not a replacement for understanding DBI.
 
 ## Next Steps
 
-- **Quick Start**: See `vignette("quick-start")` for 5-minute setup
-- **Advanced Usage**: See `vignette("advanced-usage")` for:
+- **Quick Start**: See `vignette("quickstart")` for 5-minute setup
+- **Advanced Workflow**: See `vignette("advanced-workflow")` for:
   - SSL configuration
   - IPv6 hosts
   - Environment-specific configs

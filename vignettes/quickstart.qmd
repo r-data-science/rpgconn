@@ -1,19 +1,13 @@
 ---
-title: "Quick Start Guide"
-output: rmarkdown::html_vignette
+title: "Quickstart"
+format: html
+execute:
+  eval: false
 vignette: >
-  %\VignetteIndexEntry{Quick Start Guide}
+  %\VignetteIndexEntry{Quickstart}
   %\VignetteEngine{quarto::html}
   %\VignetteEncoding{UTF-8}
 ---
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(
-  collapse = TRUE,
-  comment = "#>",
-  eval = FALSE
-)
-```
 
 ## Installation
 
@@ -408,7 +402,7 @@ cn <- dbConnect(
 ## Next Steps
 
 - **Package Overview**: See `vignette("rpgconn")` for design philosophy
-- **Advanced Usage**: See `vignette("advanced-usage")` for:
+- **Advanced Workflow**: See `vignette("advanced-workflow")` for:
   - SSL configuration
   - IPv6 hosts
   - Custom configs per project

@@ -458,7 +458,7 @@ parse_conn_string <- function(conn_str) {
 #' - **Keyword/value (semicolon)**: `user=...;password=...;host=...;port=...;dbname=...`
 #' - **Keyword/value (whitespace)**: `host=... user=... dbname=... port=...`
 #'
-#' See `vignette("advanced-usage")` for comprehensive format documentation.
+#' See `vignette("advanced-workflow")` for comprehensive format documentation.
 #'
 #' @examples
 #' \dontrun{
