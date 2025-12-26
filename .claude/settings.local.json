@@ -4,7 +4,9 @@
       "Bash(git fetch:*)",
       "Bash(git checkout:*)",
       "Bash(Rscript:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git pull:*)",
+      "Bash(gh run list:*)"
     ]
   },
   "spinnerTipsEnabled": false

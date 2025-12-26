@@ -153,6 +153,7 @@ dbd(cn)
 Other configuration: 
 \code{\link{use_config}()}
 }
+\concept{config-management}
 \concept{configuration}
 \concept{database-config}
 \concept{database-connection}

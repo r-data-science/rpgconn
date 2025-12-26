@@ -98,6 +98,8 @@
 #' })
 #' }
 #'
+#' @concept configuration
+#' @concept config-management
 #' @export
 use_config <- function(path, overwrite = FALSE) {
   tmp_path <- tryCatch(

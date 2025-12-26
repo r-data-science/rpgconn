@@ -486,6 +486,8 @@ parse_conn_string <- function(conn_str) {
 NULL
 
 #' @describeIn pgdbconn Connect to a database or return the connection arguments
+#' @concept database-connection
+#' @concept postgresql
 #' @export
 dbc <- function(cfg = NULL, db = NULL, args_only = FALSE,
                 cfg_path = NULL, opt_path = NULL) {
@@ -566,6 +568,8 @@ dbc <- function(cfg = NULL, db = NULL, args_only = FALSE,
 }
 
 #' @describeIn pgdbconn Disconnect from a database
+#' @concept database-connection
+#' @concept postgresql
 #' @export
 dbd <- function(cn) {
   message("\n|------- Closing Connection -------|")
@@ -574,6 +578,8 @@ dbd <- function(cn) {
 
 
 #' @describeIn pgdbconn Initialize connection files
+#' @concept configuration
+#' @concept config-management
 #' @export
 init_yamls <- function() {
   dir_rpg <- fs::dir_create(dir_rpg())
@@ -593,6 +599,8 @@ init_yamls <- function() {
 
 
 #' @describeIn pgdbconn get the path to the rpg settings directory
+#' @concept configuration
+#' @concept config-management
 #' @export
 dir_rpg <- function() {
   # Use a user-specific configuration directory compliant with CRAN policies
@@ -602,6 +610,8 @@ dir_rpg <- function() {
 }
 
 #' @describeIn pgdbconn edit the internally configured connection parameters
+#' @concept configuration
+#' @concept config-management
 #' @export
 edit_config <- function() {
   f <- xpath_config()
@@ -615,6 +625,8 @@ edit_config <- function() {
 }
 
 #' @describeIn pgdbconn edit the internally configured connection options
+#' @concept configuration
+#' @concept config-management
 #' @export
 edit_options <- function() {
   f <- xpath_options()

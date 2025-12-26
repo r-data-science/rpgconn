@@ -28,12 +28,10 @@ reference:
     desc: Core functions for connecting to and disconnecting from PostgreSQL databases
     contents:
       - has_concept("database-connection")
-      - has_concept("postgresql")
 
   - title: Configuration Management
     desc: Manage connection configurations and options
     contents:
-      - has_concept("configuration")
       - has_concept("config-management")
 
 articles:
