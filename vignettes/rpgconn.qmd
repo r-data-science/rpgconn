@@ -1,0 +1,236 @@
+---
+title: "Get started with rpgconn"
+format: html
+execute:
+  eval: false
+vignette: >
+  %\VignetteIndexEntry{Get started with rpgconn}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
+---
+
+## The Problem
+
+PostgreSQL connection management in R is unnecessarily painful:
+
+- **Scattered credentials**: Connection strings copy-pasted across scripts
+- **Security risks**: Passwords committed to version control
+- **Format inconsistency**: Different formats between local dev and cloud deployments
+- **Cryptic errors**: "Could not connect" messages that don't explain what's wrong
+- **Boilerplate fatigue**: Repetitive `DBI::dbConnect()` calls with 5+ arguments
+
+## The rpgconn Solution
+
+`rpgconn` eliminates this friction through three key principles:
+
+### 1. Fail-Fast Validation
+
+Connection strings are validated **before** attempting to connect. Instead of:
+
+```r
+# ❌ Cryptic error deep in DBI
+Error: could not connect to server
+```
+
+You get:
+
+```r
+# ✅ Clear, actionable error
+Error: Connection string must include a '/{database}' segment,
+       e.g. 'postgresql://user@host:5432/dbname'
+```
+
+### 2. Portable Format
+
+Uses the **PostgreSQL URI standard** that works everywhere:
+
+- Python (`psycopg2`, `sqlalchemy`)
+- Node.js (`pg`, `sequelize`)
+- Go (`pgx`, `database/sql`)
+- Command-line tools (`psql`, `pg_dump`)
+- Cloud providers (DigitalOcean, AWS RDS, Heroku)
+
+One connection string, any environment.
+
+### 3. Secure by Default
+
+Configuration files live in **user-specific directories** (`~/.config/rpgconn` on Linux/Mac, `%APPDATA%/rpgconn` on Windows), never in your project repository.
+
+```r
+init_yamls()      # Creates config in safe location
+edit_config()     # Opens editor - NO manual file hunting
+# ✅ Never accidentally commit secrets
+```
+
+## Design Philosophy
+
+### Single Responsibility
+
+`rpgconn` does **one thing well**: connect to PostgreSQL databases. It doesn't:
+
+- Manage connection pools (use `pool`)
+- Query databases (use `DBI` or `dbplyr`)
+- Migrate schemas (use `dbx` or custom scripts)
+
+### Zero Dependencies Beyond Essentials
+
+Only depends on:
+- `DBI` and `RPostgres` (required for Postgres anyway)
+- `yaml`, `fs`, `stringr`, `usethis` (ubiquitous, stable packages)
+
+No heavy frameworks. No version conflicts.
+
+### Progressive Enhancement
+
+Simple use cases stay simple:
+
+```r
+# Beginner: Just works
+Sys.setenv(RPG_CONN_STRING = "postgresql://user:pass@host/db")
+cn <- dbc()
+```
+
+Complex scenarios are supported without cluttering the simple path:
+
+```r
+# Advanced: Custom config, SSL, connection pooling options
+cn <- dbc(
+  cfg = "prod",
+  cfg_path = "config/prod-db.yml",
+  opt_path = "config/prod-opts.yml"
+)
+```
+
+## Architecture
+
+### Connection String Parsing
+
+The package supports three PostgreSQL connection string formats:
+
+1. **URI Format** (recommended)
+   ```
+   postgresql://user:pass@host:5432/db?sslmode=require
+   ```
+
+2. **Keyword/Value (semicolon)**
+   ```
+   user=alice;password=secret;host=localhost;port=5432;dbname=mydb
+   ```
+
+3. **Keyword/Value (whitespace)** - libpq standard
+   ```
+   host=localhost user=alice dbname=mydb port=5432
+   ```
+
+### Validation-First Approach
+
+**Old approach** (DBI direct):
+```
+Parse → Connect → (Fail deep in driver)
+```
+
+**rpgconn approach**:
+```
+Validate → Parse → Connect
+    ↓
+ (Fail fast with clear message)
+```
+
+Validation catches:
+- Missing database name
+- Empty user/host
+- Invalid port numbers
+- Whitespace (copy/paste errors)
+- Wrong URI scheme (mysql://, http://)
+
+### URL Encoding Support
+
+Handles special characters in passwords and parameters:
+
+```r
+# Password contains @ and :
+# URL-encoded: p@ss:word → p%40ss%3Aword
+"postgresql://user:p%40ss%3Aword@host/db"
+```
+
+IPv6 hosts:
+
+```r
+"postgresql://user@[2001:db8::1]:5432/db"
+```
+
+## Comparison: rpgconn vs DBI::dbConnect()
+
+### Without rpgconn
+
+```r
+library(DBI)
+library(RPostgres)
+
+# Scattered connection details
+host <- "db.example.com"
+port <- 5432
+dbname <- "mydb"
+user <- Sys.getenv("DB_USER")
+password <- Sys.getenv("DB_PASSWORD")
+
+# Verbose boilerplate (every script)
+cn <- dbConnect(
+  Postgres(),
+  host = host,
+  port = port,
+  dbname = dbname,
+  user = user,
+  password = password,
+  sslmode = "require",
+  connect_timeout = 10
+)
+
+# ... later ...
+dbDisconnect(cn)
+```
+
+### With rpgconn
+
+```r
+library(rpgconn)
+
+# One environment variable (set once, use everywhere)
+Sys.setenv(RPG_CONN_STRING =
+  "postgresql://user:pass@db.example.com:5432/mydb?sslmode=require")
+
+# Single function call
+cn <- dbc()
+
+# ... later ...
+dbd(cn)
+```
+
+**Lines of code**: 16 → 4 (75% reduction)
+**Failure points**: Many → Few (validated upfront)
+**Secrets in code**: Yes → No (environment variable)
+
+## When NOT to Use rpgconn
+
+Use `DBI::dbConnect()` directly when:
+
+- **Non-PostgreSQL databases** (rpgconn only supports PostgreSQL)
+- **Exotic connection parameters** not in libpq standard
+- **Educational contexts** where understanding raw DBI is the goal
+
+rpgconn is a convenience wrapper, not a replacement for understanding DBI.
+
+## Next Steps
+
+- **Quick Start**: See `vignette("quickstart")` for 5-minute setup
+- **Advanced Workflow**: See `vignette("advanced-workflow")` for:
+  - SSL configuration
+  - IPv6 hosts
+  - Environment-specific configs
+  - Troubleshooting guide
+
+## Learn More
+
+- [PostgreSQL Connection Strings](https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNSTRING)
+- [RPostgres Documentation](https://rpostgres.r-dbi.org/)
+- [DBI Package](https://dbi.r-dbi.org/)

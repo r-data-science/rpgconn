@@ -7,3 +7,7 @@
 ^cran-comments\.md$
 ^CLAUDE\.md$
 ^AGENTS\.md$
+^\.claude$
+^_pkgdown\.yml$
+^pkgdown$
+^docs$

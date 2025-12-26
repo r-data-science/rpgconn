@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git fetch:*)",
+      "Bash(git checkout:*)",
+      "Bash(Rscript:*)",
+      "Bash(git add:*)"
+    ]
+  },
+  "spinnerTipsEnabled": false
+}
