@@ -1,27 +1,45 @@
-test_that("multiplication works", {
+test_that("use_config validates inputs", {
+  local_rpg_sandbox()
 
-  ## Move existing config to temp and reset after test
-  old_conf <- tempfile(fileext = ".yaml")
-  conf_path <- fs::path(dir_rpg(), "config.yml")
-  fs::file_copy(conf_path, old_conf)
-  on.exit(
-    fs::file_copy(old_conf, conf_path, overwrite = TRUE)
+  expect_error(use_config(1), "`path` must be a single, non-empty character")
+  expect_error(use_config("some.yml", overwrite = NA), "`overwrite` must be TRUE or FALSE")
+})
+
+test_that("use_config rejects invalid yaml structure", {
+  local_rpg_sandbox()
+
+  invalid_cfg <- withr::local_tempfile(fileext = ".yml")
+  yaml::write_yaml(list(not_config = list(dev = list(host = "localhost"))), invalid_cfg)
+
+  expect_error(
+    use_config(invalid_cfg, overwrite = TRUE),
+    "top-level 'config:' mapping"
+  )
+})
+
+test_that("use_config adopts config and dbc can read it", {
+  local_rpg_sandbox()
+  init_yamls()
+
+  incoming_cfg <- withr::local_tempfile(fileext = ".yml")
+  yaml::write_yaml(
+    list(
+      config = list(
+        dev = list(host = "127.0.0.1", port = 5432, user = "dev_user", password = "dev_pass")
+      )
+    ),
+    incoming_cfg
   )
 
+  expect_error(use_config(incoming_cfg), "Failed to overwrite existing config")
 
-  ## Expect Error (already exists and overwrite not TRUE)
-  use_config("test_config.yaml") |>
-    expect_error()
+  out_path <- use_config(incoming_cfg, overwrite = TRUE)
+  expect_true(fs::file_exists(out_path))
 
-
-  ## Remove Existing file and try again
-  fs::file_delete(conf_path)
-
-  use_config("test_config.yaml") |>
-    expect_no_error()
-
-
-  ## Now try with overwrite as TRUE
-  use_config("test_config.yaml", overwrite = TRUE) |>
-    expect_no_error()
+  args <- dbc(cfg = "dev", db = "mydb", args_only = TRUE)
+  expect_equal(args$host, "127.0.0.1")
+  expect_equal(args$port, 5432)
+  expect_equal(args$user, "dev_user")
+  expect_equal(args$password, "dev_pass")
+  expect_equal(args$dbname, "mydb")
 })

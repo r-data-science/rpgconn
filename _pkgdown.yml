@@ -22,6 +22,10 @@ navbar:
         href: articles/quickstart.html
       - text: Advanced Workflow
         href: articles/advanced-workflow.html
+      - text: Maintainer Guide
+        href: articles/maintainer-guide.html
+      - text: Release Playbook
+        href: articles/release-playbook.html
 
 reference:
   - title: Database Connection
@@ -43,6 +47,8 @@ articles:
     contents:
       - quickstart
       - advanced-workflow
+      - maintainer-guide
+      - release-playbook
 
 footer:
   structure:

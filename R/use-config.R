@@ -47,7 +47,7 @@
 #' Tests need isolated, reproducible configurations:
 #'
 #' ```r
-#' use_config("tests/fixtures/mock-config.yml")
+#' use_config("config-test.yml")
 #' ```
 #'
 #' ## How It Works
@@ -91,10 +91,13 @@
 #'
 #' # Testing with fixture
 #' withr::with_tempfile("temp_config", {
-#'   use_config("tests/fixtures/test-config.yml")
-#'   cn <- dbc(cfg = "test", db = "testdb")
-#'   # ... run tests ...
-#'   dbd(cn)
+#'   yaml::write_yaml(
+#'     list(config = list(test = list(host = "localhost", port = 5432))),
+#'     temp_config
+#'   )
+#'   use_config(temp_config, overwrite = TRUE)
+#'   args <- dbc(cfg = "test", db = "testdb", args_only = TRUE)
+#'   str(args)
 #' })
 #' }
 #'
@@ -102,11 +105,21 @@
 #' @concept config-management
 #' @export
 use_config <- function(path, overwrite = FALSE) {
+  if (!is.character(path) || length(path) != 1L || !nzchar(path)) {
+    stop("`path` must be a single, non-empty character value.", call. = FALSE)
+  }
+  if (!is.logical(overwrite) || length(overwrite) != 1L || is.na(overwrite)) {
+    stop("`overwrite` must be TRUE or FALSE.", call. = FALSE)
+  }
+
   tmp_path <- tryCatch(
     {
       # write input yaml at path to temp yaml file
       tmp <- tempfile(fileext = ".yml")
       new_yaml <- yaml::read_yaml(path)
+      if (is.null(new_yaml$config) || !is.list(new_yaml$config)) {
+        stop("Config file must contain a top-level 'config:' mapping.")
+      }
       yaml::write_yaml(new_yaml, file = tmp)
       tmp
     },

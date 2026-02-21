@@ -10,7 +10,14 @@
 \alias{edit_options}
 \title{PostgreSQL Database Connection Management}
 \usage{
-dbc(cfg = NULL, db = NULL, args_only = FALSE, cfg_path = NULL, opt_path = NULL)
+dbc(
+  cfg = NULL,
+  db = NULL,
+  args_only = FALSE,
+  cfg_path = NULL,
+  opt_path = NULL,
+  path = NULL
+)
 
 dbd(cn)
 
@@ -37,6 +44,8 @@ establishing a connection. If `FALSE` (default), establish and return the connec
 Useful for testing or project-specific configurations.}
 
 \item{opt_path}{Optional path to override default database options file location.}
+
+\item{path}{Deprecated alias for `cfg_path`. Retained for backward compatibility.}
 
 \item{cn}{A database connection object to disconnect.}
 }
@@ -141,8 +150,10 @@ args <- dbc(args_only = TRUE)
 str(args)
 
 # Use custom config file (testing, project-specific)
-cn <- dbc(cfg = "test", db = "testdb", cfg_path = "tests/fixtures/config.yml")
-dbd(cn)
+tmp_cfg <- tempfile(fileext = ".yml")
+yaml::write_yaml(list(config = list(test = list(host = "localhost", port = 5432))), tmp_cfg)
+args <- dbc(cfg = "test", db = "testdb", args_only = TRUE, cfg_path = tmp_cfg)
+str(args)
 }
 }
 \seealso{

@@ -7,176 +7,203 @@
 [![CRAN status](https://www.r-pkg.org/badges/version/rpgconn)](https://CRAN.R-project.org/package=rpgconn)
 <!-- badges: end -->
 
-## Why rpgconn?
+`rpgconn` is a PostgreSQL connection management package for R.
 
-PostgreSQL connection management in R is unnecessarily painful:
+It gives you one stable interface (`dbc()`) for:
+- `RPG_CONN_STRING` environment-variable connections
+- YAML-based named configs (`cfg = "dev"`)
+- optional config/option file overrides (`cfg_path`, `opt_path`)
 
-- **Credentials scattered everywhere**: Connection strings copy-pasted across dozens of scripts
-- **Security nightmares**: Passwords accidentally committed to version control
-- **Format hell**: Local dev uses `host=localhost user=...`, cloud uses `postgresql://...`, CI uses something else
-- **Cryptic errors**: "Could not connect to server" - but *why*? Wrong port? Missing password? Typo in host?
-- **Boilerplate fatigue**: Writing `DBI::dbConnect(Postgres(), host=..., port=..., user=..., password=..., dbname=...)` gets old fast
-
-**rpgconn fixes all of this.** One package, one function, one connection string - everywhere.
-
-## Features
-
-✅ **Portable** - Standard PostgreSQL URI format works across Python, Node.js, Go, command-line tools, and cloud platforms
-✅ **Secure** - Credentials stored in user-specific config directories, never in your repo
-✅ **Flexible** - Supports URI format, keyword/value format, and YAML configs
-✅ **Fail-Fast** - Validates connection strings upfront with clear, actionable error messages
-✅ **Zero Friction** - One function call replaces 6+ lines of DBI boilerplate
-✅ **CRAN-Ready** - Stable, tested, maintained, with comprehensive documentation
+The package is designed to fail fast with explicit errors before DBI tries to connect.
 
 ## Installation
 
 ```r
-# From CRAN
+# CRAN
 install.packages("rpgconn")
 
-# Development version from GitHub
-# install.packages("pak")
+# Development
 pak::pkg_install("r-data-science/rpgconn")
 ```
 
 ## Quick Start
 
-### Method 1: Connection String (Cloud Databases)
+### 1. Connect from `RPG_CONN_STRING`
 
 ```r
 library(rpgconn)
 
-# Set your database connection string (from DigitalOcean, AWS RDS, etc.)
-Sys.setenv(RPG_CONN_STRING = "postgresql://user:pass@db.example.com:5432/mydb?sslmode=require")
+Sys.setenv(
+  RPG_CONN_STRING = "postgresql://user:pass@localhost:5432/mydb?sslmode=require"
+)
 
-# Connect in one line
 cn <- dbc()
-
-# Use standard DBI functions
-DBI::dbGetQuery(cn, "SELECT * FROM users LIMIT 10")
-
-# Disconnect
+DBI::dbGetQuery(cn, "SELECT version()")
 dbd(cn)
 ```
 
-### Method 2: YAML Configuration (Teams & Local Dev)
+### 2. Connect from YAML config
 
 ```r
 library(rpgconn)
 
-# Initialize config files in ~/.config/rpgconn/
-init_yamls()
+init_yamls()      # creates config + options in tools::R_user_dir("rpgconn", "config")
+edit_config()     # edit config.yml
 
-# Edit config (opens in your default editor)
-edit_config()
+cn <- dbc(cfg = "dev", db = "analytics")
+dbd(cn)
 ```
 
-Edit `config.yml`:
+Example `config.yml`:
+
 ```yaml
 config:
   dev:
     host: localhost
     port: 5432
-    user: myapp_user
-    password: dev_password
-
-  prod:
-    host: prod-db.example.com
-    port: 5432
-    user: app_prod
+    user: app_user
     password: secret
 ```
 
-Connect using named configs:
-```r
-# Development database
-cn <- dbc(cfg = "dev", db = "myapp_dev")
-dbd(cn)
-
-# Production database
-cn <- dbc(cfg = "prod", db = "myapp_prod")
-dbd(cn)
-```
-
-## Supported Connection String Formats
-
-rpgconn supports all standard PostgreSQL connection formats:
-
-### URI Format (Recommended)
+### 3. Use project-specific config files
 
 ```r
-# Basic
-"postgresql://user:password@host:5432/database"
-
-# With SSL
-"postgresql://user:pass@host/db?sslmode=require"
-
-# IPv6 host
-"postgresql://user:pass@[2001:db8::1]:5432/db"
-
-# Multiple parameters
-"postgresql://user@host/db?sslmode=require&connect_timeout=30&application_name=MyApp"
-```
-
-Both `postgresql://` and `postgres://` prefixes are supported.
-
-### Keyword/Value Formats
-
-```r
-# Semicolon-delimited (legacy)
-"user=alice;password=secret;host=localhost;port=5432;dbname=mydb"
-
-# Whitespace-delimited (libpq standard)
-"host=localhost port=5432 user=alice dbname=mydb"
-
-# With quoted values (for spaces)
-"host='my host' user=alice dbname='my database' port=5432"
-```
-
-## Comparison: Before vs After
-
-### Without rpgconn
-```r
-library(DBI)
-library(RPostgres)
-
-cn <- dbConnect(
-  Postgres(),
-  host = "db.example.com",
-  port = 5432,
-  dbname = "mydb",
-  user = "myuser",
-  password = "mypassword",
-  sslmode = "require"
+cn <- dbc(
+  cfg = "dev",
+  db = "analytics",
+  cfg_path = "config/dev-db.yml",
+  opt_path = "config/dev-options.yml"
 )
-
-# ... do work ...
-
-dbDisconnect(cn)
-```
-
-### With rpgconn
-```r
-library(rpgconn)
-
-cn <- dbc()  # All config from RPG_CONN_STRING
-
-# ... do work ...
-
 dbd(cn)
 ```
 
-**Result**: 9 lines → 3 lines. Zero chance of committing credentials. One source of truth.
+## Main API
 
-## Learn More
+- `dbc()`: build connection args or open a PostgreSQL connection
+- `dbd()`: disconnect
+- `init_yamls()`: create default config + options files
+- `edit_config()`, `edit_options()`: open active files interactively
+- `use_config()`: replace active config with an external YAML file
 
-- 📘 **[Package Overview](https://r-data-science.github.io/rpgconn/articles/rpgconn.html)** - Design philosophy and architecture
-- 🚀 **[Quickstart Guide](https://r-data-science.github.io/rpgconn/articles/quickstart.html)** - Get connected in 5 minutes
-- 🔧 **[Advanced Workflow](https://r-data-science.github.io/rpgconn/articles/advanced-workflow.html)** - SSL, IPv6, troubleshooting, and more
-- 📖 **[Function Reference](https://r-data-science.github.io/rpgconn/reference/index.html)** - Complete API documentation
+Notes:
+- `dbc(path = ...)` is supported for backward compatibility but deprecated; use `cfg_path`.
+- Invalid env-var logging redacts secrets.
 
-## Getting Help
+## Connection String Formats
 
-- 💬 **Questions?** [Open a discussion](https://github.com/r-data-science/rpgconn/discussions)
-- 🐛 **Found a bug?** [Report an issue](https://github.com/r-data-science/rpgconn/issues)
-- 💡 **Feature request?** [Share your idea](https://github.com/r-data-science/rpgconn/issues/new)
+`dbc()` accepts:
+
+- URI: `postgresql://user:pass@host:5432/db?sslmode=require`
+- URI alias: `postgres://...`
+- Keyword/value (semicolon): `host=...;port=...;dbname=...`
+- Keyword/value (whitespace): `host=... port=... dbname=...`
+
+## Documentation (Pkgdown + Quarto)
+
+This repo uses:
+- roxygen2 for function docs (`R/*.R` -> `man/*.Rd`)
+- Quarto vignettes (`vignettes/*.qmd`)
+- pkgdown for site generation
+
+Primary long-form docs:
+- `vignettes/quickstart.qmd`
+- `vignettes/rpgconn.qmd`
+- `vignettes/advanced-workflow.qmd`
+
+Build docs locally:
+
+```r
+devtools::document()
+pkgdown::build_site()
+```
+
+## Development Setup
+
+Install all development dependencies declared in `DESCRIPTION`:
+
+```r
+pak::local_install_dev_deps(dependencies = TRUE)
+```
+
+Daily workflow:
+
+```r
+devtools::load_all()
+devtools::test()
+devtools::check()
+```
+
+## Testing Strategy
+
+### Unit tests
+
+Unit tests are hermetic:
+- they isolate `R_USER_CONFIG_DIR` to temp directories
+- they isolate `RPG_CONN_STRING` per test
+- they do not depend on your real `~/.config` files
+
+### Optional local Postgres E2E test
+
+A disposable integration test is included and skipped by default.
+
+Enable locally:
+
+```bash
+export RPGCONN_RUN_DB_TESTS=true
+export RPGCONN_TEST_CONN_STRING="postgresql://postgres:postgres@localhost:5432/postgres"
+```
+
+Then run:
+
+```r
+devtools::test()
+```
+
+The E2E test uses a temporary table (`CREATE TEMP TABLE`) so test data is removed automatically when the connection closes.
+
+## Release Workflow
+
+Run the full pre-release gate:
+
+```r
+devtools::document()
+devtools::test()
+devtools::check()
+devtools::spell_check()
+urlchecker::url_check(".")
+```
+
+If Quarto cache permissions cause `attempt to write a readonly database`, run:
+
+```r
+withr::with_envvar(c(XDG_CACHE_HOME = tempdir()), devtools::check())
+```
+
+Then:
+- update `NEWS.md`
+- refresh `cran-comments.md`
+- submit/re-submit to CRAN
+- publish GitHub release
+
+## Maintainer Conventions
+
+- Prefer `data.table` semantics whenever tabular manipulation is needed.
+- Keep vignettes in Quarto `.qmd` format.
+- Keep all exported functions fully documented with roxygen2.
+- Avoid logging raw credentials.
+- Keep parser changes paired with regression tests.
+
+## Project Layout
+
+- `R/`: package source
+- `tests/testthat/`: unit + optional E2E tests
+- `vignettes/`: Quarto documentation
+- `_pkgdown.yml`: site configuration
+- `.github/workflows/`: CI for checks, coverage, pkgdown deploy
+- `AGENTS.md`: persistent AI/automation conventions for this repo
+
+## Links
+
+- Package website: <https://r-data-science.github.io/rpgconn/>
+- Issues: <https://github.com/r-data-science/rpgconn/issues>
+- Questions: <https://github.com/r-data-science/rpgconn/issues/new/choose>

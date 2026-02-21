@@ -46,7 +46,7 @@ use_config("config-prod.yml", overwrite = TRUE)  # Switch to prod
 Tests need isolated, reproducible configurations:
 
 ```r
-use_config("tests/fixtures/mock-config.yml")
+use_config("config-test.yml")
 ```
 
 ## How It Works
@@ -90,10 +90,13 @@ use_config(paste0("config-", env, ".yml"))
 
 # Testing with fixture
 withr::with_tempfile("temp_config", {
-  use_config("tests/fixtures/test-config.yml")
-  cn <- dbc(cfg = "test", db = "testdb")
-  # ... run tests ...
-  dbd(cn)
+  yaml::write_yaml(
+    list(config = list(test = list(host = "localhost", port = 5432))),
+    temp_config
+  )
+  use_config(temp_config, overwrite = TRUE)
+  args <- dbc(cfg = "test", db = "testdb", args_only = TRUE)
+  str(args)
 })
 }
 

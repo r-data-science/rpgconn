@@ -1,0 +1,64 @@
+---
+title: "Release Playbook"
+format: html
+execute:
+  eval: false
+vignette: >
+  %\VignetteIndexEntry{Release Playbook}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
+---
+
+## Pre-release Checklist
+
+Run the full quality gate:
+
+```r
+devtools::document()
+devtools::test()
+devtools::check()
+devtools::spell_check()
+urlchecker::url_check(".")
+```
+
+## Optional Integration Confidence
+
+If local Postgres is available:
+
+```bash
+export RPGCONN_RUN_DB_TESTS=true
+export RPGCONN_TEST_CONN_STRING="postgresql://postgres:postgres@localhost:5432/postgres"
+```
+
+Then rerun:
+
+```r
+devtools::test()
+```
+
+## Release Metadata
+
+Update these files every release:
+- `DESCRIPTION` (version)
+- `NEWS.md` (what changed)
+- `cran-comments.md` (submission context/check summary)
+
+## Website and Docs
+
+Rebuild docs before publishing:
+
+```r
+pkgdown::build_site()
+```
+
+Confirm:
+- all `.qmd` vignettes render
+- references in README/vignettes are current
+- no stale argument names
+
+## CRAN + GitHub Release
+
+1. Submit to CRAN.
+2. Tag release in GitHub.
+3. Publish release notes using `NEWS.md` highlights.
+4. Confirm pkgdown deploy workflow succeeds.

@@ -1,0 +1,73 @@
+---
+title: "Maintainer Guide"
+format: html
+execute:
+  eval: false
+vignette: >
+  %\VignetteIndexEntry{Maintainer Guide}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
+---
+
+## Audience
+
+This vignette is for maintainers onboarding to `rpgconn`.
+
+## Repository Structure
+
+- `R/pgdbconn.R`: parser, validation, connection orchestration
+- `R/use-config.R`: config adoption helper
+- `tests/testthat/`: hermetic unit tests and optional local Postgres E2E
+- `vignettes/*.qmd`: Quarto docs used by pkgdown
+- `_pkgdown.yml`: website structure
+
+## Development Setup
+
+```r
+pak::local_install_dev_deps(dependencies = TRUE)
+```
+
+## Daily Development Workflow
+
+```r
+devtools::load_all()
+devtools::document()
+devtools::test()
+```
+
+## Design Principles
+
+1. Fail fast on malformed connection strings.
+2. Never print raw credentials.
+3. Keep config storage user-specific via `tools::R_user_dir()`.
+4. Preserve backward compatibility where feasible, but mark deprecated APIs.
+
+## Testing Principles
+
+- Unit tests isolate `R_USER_CONFIG_DIR` and `RPG_CONN_STRING`.
+- Parser changes must add direct regression tests.
+- Integration coverage is optional and gated by env vars.
+
+## Optional Local Postgres E2E
+
+Enable:
+
+```bash
+export RPGCONN_RUN_DB_TESTS=true
+export RPGCONN_TEST_CONN_STRING="postgresql://postgres:postgres@localhost:5432/postgres"
+```
+
+Then run:
+
+```r
+devtools::test()
+```
+
+The test uses a temporary SQL table and does not persist data.
+
+## Conventions
+
+- Use explicit `pkg::fn()` style.
+- Prefer `data.table` semantics for tabular workflows.
+- Keep vignettes in Quarto `.qmd`.
+- Keep roxygen docs complete for exported functions.

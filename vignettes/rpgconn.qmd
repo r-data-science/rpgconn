@@ -141,7 +141,7 @@ Validation catches:
 - Empty user/host
 - Invalid port numbers
 - Whitespace (copy/paste errors)
-- Wrong URI scheme (mysql://, http://)
+- Wrong URI scheme (`mysql://`, `http://`)
 
 ### URL Encoding Support
 

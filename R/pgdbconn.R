@@ -13,6 +13,38 @@
 #'
 #' @noRd
 #' @keywords internal
+.redact_conn_str <- function(x) {
+  if (!is.character(x) || length(x) != 1L || !nzchar(trimws(x))) {
+    return("<unset>")
+  }
+
+  redacted <- trimws(x)
+
+  # URI format: postgresql://user:password@host/db -> mask password.
+  redacted <- sub(
+    "(?i)^(postgres(?:ql)?://[^:/?#@]+:)[^@]*(?=@)",
+    "\\1****",
+    redacted,
+    perl = TRUE
+  )
+
+  # Keyword/value format: password=secret -> mask value.
+  redacted <- gsub(
+    "(?i)(password\\s*=\\s*)([^;[:space:]]+|'[^']*'|\"[^\"]*\")",
+    "\\1****",
+    redacted,
+    perl = TRUE
+  )
+
+  if (nchar(redacted) > 120L) {
+    redacted <- paste0(substr(redacted, 1L, 117L), "...")
+  }
+
+  redacted
+}
+
+#' @noRd
+#' @keywords internal
 .validate_conn_str <- function(ctxt) {
   if (!is.character(ctxt) || length(ctxt) != 1L) {
     stop("Connection string must be a single character value.", call. = FALSE)
@@ -59,12 +91,14 @@
     )
   }
 
-  parts <- strsplit(rest, "/", fixed = TRUE)[[1]]
-  if (length(parts) < 2L || !nzchar(parts[2L])) {
+  slash_pos <- regexpr("/", rest, fixed = TRUE)[1L]
+  authority <- substr(rest, 1L, slash_pos - 1L)
+  db_path <- substr(rest, slash_pos + 1L, nchar(rest))
+  dbname_raw <- sub("\\?.*$", "", db_path)
+  if (!nzchar(dbname_raw)) {
     stop("Database name appears to be missing in connection string.", call. = FALSE)
   }
 
-  authority <- parts[1L]
   if (!nzchar(authority)) {
     stop("Host/user information appears to be missing in connection string.", call. = FALSE)
   }
@@ -84,6 +118,9 @@
   }
 
   if (!nzchar(hostport)) {
+    stop("Host portion after '@' is empty in connection string.", call. = FALSE)
+  }
+  if (startsWith(hostport, ":")) {
     stop("Host portion after '@' is empty in connection string.", call. = FALSE)
   }
 
@@ -133,6 +170,9 @@ parse_conn_str <- function(ctxt = Sys.getenv("RPG_CONN_STRING")) {
   # Using the entire path as dbname avoids surprising behavior when people
   # (rarely) include slashes in database names; we simply pass through what
   # they specified.
+  if (!nzchar(path)) {
+    stop("Database name appears to be missing in connection string.", call. = FALSE)
+  }
   dbname <- utils::URLdecode(path)
 
   user <- password <- host <- NULL
@@ -168,17 +208,21 @@ parse_conn_str <- function(ctxt = Sys.getenv("RPG_CONN_STRING")) {
       stop("Invalid IPv6 host in connection string (missing closing ']').", call. = FALSE)
     }
     host <- substr(hp, 2L, end_bracket - 1L)
+    if (!nzchar(host)) {
+      stop("Host portion after '@' is empty in connection string.", call. = FALSE)
+    }
     rest <- substr(hp, end_bracket + 1L, nchar(hp))
     if (nzchar(rest)) {
       if (substr(rest, 1L, 1L) != ":") {
         stop("Unexpected characters after IPv6 host; expected optional ':port'.", call. = FALSE)
       }
       port_str <- substr(rest, 2L, nchar(rest))
-      if (nzchar(port_str)) {
-        port <- suppressWarnings(as.integer(port_str))
-        if (is.na(port)) {
-          stop("Port in connection string is not a valid integer.", call. = FALSE)
-        }
+      if (!nzchar(port_str)) {
+        stop("Port in connection string is empty after ':'.", call. = FALSE)
+      }
+      port <- suppressWarnings(as.integer(port_str))
+      if (is.na(port)) {
+        stop("Port in connection string is not a valid integer.", call. = FALSE)
       }
     }
   } else {
@@ -191,13 +235,20 @@ parse_conn_str <- function(ctxt = Sys.getenv("RPG_CONN_STRING")) {
     } else {
       port_str <- hp_parts[length(hp_parts)]
       host <- paste(hp_parts[-length(hp_parts)], collapse = ":")
-      if (nzchar(port_str)) {
-        port <- suppressWarnings(as.integer(port_str))
-        if (is.na(port)) {
-          stop("Port in connection string is not a valid integer.", call. = FALSE)
-        }
+      if (!nzchar(port_str)) {
+        stop("Port in connection string is empty after ':'.", call. = FALSE)
+      }
+      port <- suppressWarnings(as.integer(port_str))
+      if (is.na(port)) {
+        stop("Port in connection string is not a valid integer.", call. = FALSE)
       }
     }
+  }
+  if (!is.null(host) && !nzchar(host)) {
+    stop("Host portion after '@' is empty in connection string.", call. = FALSE)
+  }
+  if (!is.na(port) && (port < 1L || port > 65535L)) {
+    stop("Port in connection string must be between 1 and 65535.", call. = FALSE)
   }
 
   # Query parameters allow enforcing things like sslmode at the caller level
@@ -250,6 +301,8 @@ parse_conn_str <- function(ctxt = Sys.getenv("RPG_CONN_STRING")) {
 #' @noRd
 #' @keywords internal
 parse_kv_conn_string <- function(kv_str) {
+  kv_str <- trimws(kv_str)
+
   # Support both semicolon and whitespace as delimiters.
   # Semicolon is our legacy format; whitespace matches libpq standard.
   if (grepl(";", kv_str)) {
@@ -266,17 +319,19 @@ parse_kv_conn_string <- function(kv_str) {
     pair <- trimws(pair)
     if (nchar(pair) == 0) next
 
-    if (grepl("=", pair)) {
-      # Extract key and value
-      key <- stringr::str_extract(pair, ".+(?=\\=)")
-      value <- stringr::str_extract(pair, "(?<=\\=).+")
+    eq_pos <- regexpr("=", pair, fixed = TRUE)[1L]
+    if (eq_pos < 1L) next
 
-      # Remove quotes if present (for whitespace-delimited format with quoted values)
-      if (!is.na(value)) {
-        value <- gsub("^['\"]|['\"]$", "", value)
-        c_args[[key]] <- value
-      }
+    key <- trimws(substr(pair, 1L, eq_pos - 1L))
+    value <- trimws(substr(pair, eq_pos + 1L, nchar(pair)))
+    if (!nzchar(key)) next
+
+    if ((startsWith(value, "'") && endsWith(value, "'")) ||
+        (startsWith(value, "\"") && endsWith(value, "\""))) {
+      value <- substr(value, 2L, nchar(value) - 1L)
     }
+
+    c_args[[key]] <- value
   }
 
   c_args
@@ -351,14 +406,36 @@ tokenize_kv_string <- function(str) {
 #' @keywords internal
 parse_conn_string <- function(conn_str) {
   conn_str <- trimws(conn_str)
+  if (!nzchar(conn_str)) {
+    stop("Connection string is empty; check RPG_CONN_STRING.", call. = FALSE)
+  }
 
   # Check if it's a URI format (postgresql:// or postgres://)
   if (grepl("^postgres(ql)?://", conn_str, ignore.case = TRUE)) {
     return(parse_conn_str(conn_str))
   }
+  if (grepl("^[[:alpha:]][[:alnum:]+.-]*://", conn_str)) {
+    stop(
+      "Connection string must start with 'postgres://' or 'postgresql://'.",
+      call. = FALSE
+    )
+  }
 
-  # Otherwise, parse as keyword/value format
-  parse_kv_conn_string(conn_str)
+  # Otherwise, parse as keyword/value format.
+  if (!grepl("=", conn_str, fixed = TRUE)) {
+    stop(
+      "Connection string format not recognized. Use URI format ",
+      "('postgresql://...') or keyword/value format ('host=... user=...').",
+      call. = FALSE
+    )
+  }
+
+  parsed <- parse_kv_conn_string(conn_str)
+  if (length(parsed) == 0L) {
+    stop("Unable to parse any key/value parameters from connection string.", call. = FALSE)
+  }
+
+  parsed
 }
 
 #' PostgreSQL Database Connection Management
@@ -376,11 +453,12 @@ parse_conn_string <- function(conn_str) {
 #' @param cfg_path Optional path to override default database config file location.
 #'   Useful for testing or project-specific configurations.
 #' @param opt_path Optional path to override default database options file location.
+#' @param path Deprecated alias for `cfg_path`. Retained for backward compatibility.
 #' @param cn A database connection object to disconnect.
 #'
 #' @importFrom RPostgres Postgres
 #' @importFrom DBI dbConnect dbDisconnect
-#' @importFrom stringr str_extract str_split_1
+#' @importFrom stringr str_split_1
 #' @importFrom usethis edit_file
 #' @importFrom fs path_package dir_create path file_exists file_copy
 #' @importFrom yaml yaml.load_file
@@ -479,8 +557,10 @@ parse_conn_string <- function(conn_str) {
 #' str(args)
 #'
 #' # Use custom config file (testing, project-specific)
-#' cn <- dbc(cfg = "test", db = "testdb", cfg_path = "tests/fixtures/config.yml")
-#' dbd(cn)
+#' tmp_cfg <- tempfile(fileext = ".yml")
+#' yaml::write_yaml(list(config = list(test = list(host = "localhost", port = 5432))), tmp_cfg)
+#' args <- dbc(cfg = "test", db = "testdb", args_only = TRUE, cfg_path = tmp_cfg)
+#' str(args)
 #' }
 #' @name pgdbconn
 NULL
@@ -490,7 +570,18 @@ NULL
 #' @concept postgresql
 #' @export
 dbc <- function(cfg = NULL, db = NULL, args_only = FALSE,
-                cfg_path = NULL, opt_path = NULL) {
+                cfg_path = NULL, opt_path = NULL, path = NULL) {
+  if (!is.null(path)) {
+    warning(
+      "`path` is deprecated; use `cfg_path` instead.",
+      call. = FALSE
+    )
+    if (!is.null(cfg_path) && !identical(cfg_path, path)) {
+      stop("Specify only one of `path` or `cfg_path`.", call. = FALSE)
+    }
+    cfg_path <- path
+  }
+
   # if cfg is null, use envvar
   if (is.null(cfg)) {
     message("\n[---- Checking RPG_CONN_STRING ----]")
@@ -518,19 +609,24 @@ dbc <- function(cfg = NULL, db = NULL, args_only = FALSE,
     c_args$dbname <- db
   }
 
-  # Check connection args
-  # Allow additional parameters beyond the core five for URI query params
   tryCatch(
     {
-      ck_names <- c("host", "port", "dbname", "user", "password", 
-                    "sslmode", "connect_timeout", "application_name", 
-                    "options", "target_session_attrs")
-      # Only check that recognized names are used and have non-empty values
-      unknown_params <- setdiff(names(c_args), ck_names)
-      if (length(unknown_params) > 0) {
-        warning("Unknown connection parameters: ", paste(unknown_params, collapse = ", "))
+      if (!is.list(c_args) || length(c_args) == 0L) {
+        stop("No connection parameters were parsed.", call. = FALSE)
       }
-      stopifnot(all(sapply(c_args, nchar) > 0))
+
+      bad_vals <- names(c_args)[!vapply(
+        c_args,
+        FUN.VALUE = logical(1),
+        function(x) length(x) == 1L && !is.na(x) && nzchar(as.character(x))
+      )]
+      if (length(bad_vals) > 0L) {
+        stop(
+          "Connection parameters must be non-empty scalars: ",
+          paste(bad_vals, collapse = ", "),
+          call. = FALSE
+        )
+      }
     },
     error = function(c) {
       if (is.null(cfg)) {
@@ -540,14 +636,14 @@ dbc <- function(cfg = NULL, db = NULL, args_only = FALSE,
         message("\tURI with params: postgresql://user@host/db?sslmode=require")
         message("\tKeyword/value (semicolon): user=...;password=...;host=...;port=...;dbname=...")
         message("\tKeyword/value (whitespace): host=... user=... dbname=...")
-        message("\nCurrent value set to: ")
-        message("\t", Sys.getenv("RPG_CONN_STRING"), "\n")
+        message("\nCurrent value set to (redacted): ")
+        message("\t", .redact_conn_str(Sys.getenv("RPG_CONN_STRING")), "\n")
       } else {
         message("cfg specified is invalid")
         message("\nCheck config yaml file for correct format")
         message("\tcall edit_config() to view/edit")
       }
-      stop("Unable to make connection", call. = FALSE)
+      stop("Unable to build connection arguments.", call. = FALSE)
     }
   )
 
@@ -644,11 +740,21 @@ edit_options <- function() {
 load_c_args <- function(cfg_path = NULL) {
   if (is.null(cfg_path)) {
     cfg_path <- xpath_config()
+    if (!fs::file_exists(cfg_path)) {
+      init_yamls()
+    }
+  } else if (!fs::file_exists(cfg_path)) {
+    stop("Config file not found: ", cfg_path, call. = FALSE)
   }
-  if (!fs::file_exists(cfg_path)) {
-    init_yamls()
+
+  cfg <- yaml::yaml.load_file(cfg_path, eval.expr = FALSE)$config
+  if (is.null(cfg) || !is.list(cfg)) {
+    stop(
+      "Config file must contain a top-level 'config:' mapping.",
+      call. = FALSE
+    )
   }
-  yaml::yaml.load_file(cfg_path, eval.expr = TRUE)$config
+  cfg
 }
 
 #' @describeIn pgdbconn internal function to read conn options from yaml
@@ -656,11 +762,24 @@ load_c_args <- function(cfg_path = NULL) {
 load_c_opts <- function(opt_path = NULL) {
   if (is.null(opt_path)) {
     opt_path <- xpath_options()
+    if (!fs::file_exists(opt_path)) {
+      init_yamls()
+    }
+  } else if (!fs::file_exists(opt_path)) {
+    stop("Options file not found: ", opt_path, call. = FALSE)
   }
-  if (!fs::file_exists(opt_path)) {
-    init_yamls()
+
+  opts <- yaml::yaml.load_file(opt_path, eval.expr = FALSE)$options
+  if (is.null(opts)) {
+    return(list())
   }
-  yaml::yaml.load_file(opt_path)$options
+  if (!is.list(opts)) {
+    stop(
+      "Options file must contain a top-level 'options:' mapping.",
+      call. = FALSE
+    )
+  }
+  opts
 }
 
 #' @describeIn pgdbconn internal function to get path of config file
