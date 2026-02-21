@@ -1,3 +1,12 @@
+# rpgconn development
+
+## Highlights
+
+- Start of development cycle after `0.4.1` CRAN submission.
+- No user-facing changes yet.
+
+---
+
 # rpgconn 0.4.1
 
 ## Highlights
